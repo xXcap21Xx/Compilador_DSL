@@ -205,7 +205,7 @@ public class Automata {
                 // CASO C: DETECCIÓN DE ERRORES INTELIGENTE (Levenshtein)
                 // Si no es palabra reservada exacta, revisamos si el usuario se equivocó por poquito.
                 // Ejemplo: Escribió "PILAS" en vez de "PILA".
-                else if (esCasiPalabraReservada(lexemaUpper)) {
+                else if (Character.isUpperCase(lexema.charAt(0)) && esCasiPalabraReservada(lexemaUpper)) {
                     tipoFinal = "ERROR_LEXICO_PR_MAL_ESCRITA";
                     reconocido = false;
                     estadoReporte = "N/A";

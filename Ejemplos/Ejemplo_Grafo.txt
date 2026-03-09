@@ -1,0 +1,18 @@
+// Declaración
+CREAR GRAFO miGrafo;
+
+// Operaciones válidas (agregando conexiones)
+// AGREGARARISTA requiere DOS nodos: origen y destino
+AGREGARARISTA 10 20 EN miGrafo;
+AGREGARARISTA 20 30 EN miGrafo;
+AGREGARARISTA 10 30 EN miGrafo;
+
+// Algoritmos de búsqueda
+BFS EN miGrafo; // Búsqueda a lo ancho
+DFS EN miGrafo; // Búsqueda en profundidad
+
+// CAMINOCORTO también requiere DOS nodos: origen y destino
+CAMINOCORTO 10 30 EN miGrafo; // Ruta más corta de 10 a 30
+
+// Mostrar vecinos de un nodo
+MOSTRAR VECINOS 10 EN miGrafo;

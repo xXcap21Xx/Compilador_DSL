@@ -1,11 +1,13 @@
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\AnalizadorSintactico.java
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\Automata.java
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\Compilador.java
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\DSL.java
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\MotorLexico.java
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\MotorSintactico.java
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\NodoAST.java
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\TablaErrores.java
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\TablaSimbolos.java
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\Token.java
-C:\Users\MiStErX\Desktop\AUTOMATAS\src\main\java\VentanaReferencia.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\DSL.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\TablaErrores.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\NodoAST.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\AnalizadorSemantico.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\Compilador.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\MotorLexico.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\MotorSemantico.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\AnalizadorSintactico.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\MotorSintactico.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\TablaSimbolos.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\VentanaReferencia.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\Token.java
+C:\Users\Gerard\Downloads\copilador carlos\AUTOMATAS (3)\AUTOMATAS\src\main\java\Automata.java

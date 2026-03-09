@@ -1,0 +1,16 @@
+// Declaración
+CREAR ARBOL_BINARIO miArbol;
+
+// Operaciones válidas
+AGREGARNODO 50 EN miArbol;
+INSERTARIZQUIERDA 25 EN miArbol;
+INSERTARDERECHA 75 EN miArbol;
+
+// Recorridos y propiedades
+PREORDEN EN miArbol;
+INORDEN EN miArbol;
+POSTORDEN EN miArbol;
+RECORRIDOPORNIVELES EN miArbol;
+
+MOSTRAR ALTURA EN miArbol;
+MOSTRAR HOJAS EN miArbol;

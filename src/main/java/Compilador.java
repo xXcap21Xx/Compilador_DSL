@@ -148,7 +148,7 @@ public class Compilador extends JFrame {
 
         txtEntrada = new JTextPane();
         txtEntrada.setFont(new Font("Consolas", Font.PLAIN, 14));
-        txtEntrada.setText("// Ejemplo de codigo \nCREAR PILA miPila;\nAPILAR 10 EN miPila;\n\nIF (TOPE EN miPila > 15) {\n    MOSTRAR \"Es mayor\";\n    ELIMINAR EN miPila;\n} ELSE {\n    MOSTRAR \"Es menor\";\n}");
+        txtEntrada.setText("");
 
         doc = txtEntrada.getStyledDocument();
         inicializarEstilos();
@@ -341,7 +341,7 @@ public class Compilador extends JFrame {
 
     /* * MÉTODO CORREGIDO QUE INTEGRA EL MOTOR SEMÁNTICO Y UNIFICA LAS TABLAS DE ERRORES 
      */
-    private void ejecutarAnalisisSintactico() {
+private void ejecutarAnalisisSintactico() {
         limpiarTablas();
         String codigo = txtEntrada.getText();
 

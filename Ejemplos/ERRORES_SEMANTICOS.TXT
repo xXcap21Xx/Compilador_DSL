@@ -1,0 +1,156 @@
+
+// --- Ejemplo de error: Uso de variable fuera de su scope ---
+CREAR NUMERO x = 10;
+IF (x == 10) {
+    CREAR TEXTO mensaje = "Dentro del IF";
+    MOSTRAR mensaje;
+}
+// Error DSL(301): 'mensaje' ya no existe fuera del IF
+MOSTRAR mensaje;
+
+// --- Ejemplo funcional ---
+CREAR NUMERO x = 10;
+IF (x == 10) {
+    CREAR TEXTO mensaje = "Dentro del IF";
+    MOSTRAR mensaje;
+}
+// No se usa 'mensaje' fuera del IF
+
+// --- Ejemplo de error: Operación matemática entre estructuras incompatibles ---
+CREAR COLA miCola;
+CREAR NUMERO resultado = miCola + 5; // Error DSL(305)
+
+// --- Ejemplo funcional ---
+CREAR COLA miCola;
+ENCOLAR 5 EN miCola;
+CREAR NUMERO resultado = 5 + 5;
+
+// --- Ejemplo de error: Asignación de tipo incorrecto ---
+CREAR TEXTO t = 123; // Error DSL(303)
+CREAR NUMERO n = "texto"; // Error DSL(303)
+
+// --- Ejemplo funcional ---
+CREAR TEXTO t = "hola";
+CREAR NUMERO n = 123;
+
+// --- Ejemplo de error: Uso de comando de ARBOL en LISTA ---
+CREAR LISTA_ENLAZADA miLista;
+AGREGARNODO 10 EN miLista; // Error DSL(304)
+
+// --- Ejemplo funcional ---
+CREAR LISTA_ENLAZADA miLista;
+INSERTAR_INICIO 10 EN miLista;
+
+// --- Ejemplo de error: Uso de variable no inicializada ---
+CREAR NUMERO a;
+MOSTRAR a; // Error DSL(306)
+
+// --- Ejemplo funcional ---
+CREAR NUMERO a = 5;
+MOSTRAR a;
+
+// --- Ejemplo de error: Redeclaración en el mismo ámbito ---
+CREAR TEXTO var = "uno";
+CREAR TEXTO var = "dos"; // Error DSL(302)
+
+// --- Ejemplo funcional ---
+CREAR TEXTO var = "uno";
+MOSTRAR var;
+}
+
+// Error DSL(301): La variable 'otraPila' no existe.
+POP EN otraPila;
+//-------------------------------------------------------------------
+// --- Test Pila Incorrecto ---
+CREAR PILA miPila;
+APILAR 10 EN miPila;
+
+// Error DSL(304): Comando 'ENCOLAR' no es compatible con PILA.
+ENCOLAR 30 EN miPila;
+
+// Error DSL(305): No se puede usar una PILA en una comparación numérica.
+IF (miPila > 5) {
+    MOSTRAR "Esto es un error.";
+}
+
+// Error DSL(301): La variable 'otraPila' no existe.
+POP EN otraPila;
+
+
+// --- Test Cola Correcto -------------------------------------------
+CREAR COLA filaDeEspera;
+ENCOLAR 100 EN filaDeEspera;
+ENQUEUE 200 EN filaDeEspera;
+
+CREAR NUMERO primerElemento = FRENTE EN filaDeEspera;
+
+IF (primerElemento == 100) {
+    DESENCOLAR EN filaDeEspera;
+}
+
+VER_FILA EN filaDeEspera;
+
+// --- Test Cola Incorrecto ---
+CREAR COLA miCola;
+
+// Error DSL(304): Comando 'APILAR' no es compatible con COLA.
+APILAR 50 EN miCola;
+
+// Error DSL(302): La variable 'miCola' ya fue declarada.
+CREAR COLA miCola;
+
+// Error DSL(305): No se puede sumar una COLA.
+CREAR NUMERO y = miCola + 1;
+// --- Test Lista Correcto ---
+CREAR LISTA_DOBLE_ENLAZADA miListaDoble;
+INSERTAR_INICIO 10 EN miListaDoble;
+INSERTAR_FINAL 20 EN miListaDoble;
+
+RECORRERADELANTE EN miListaDoble;
+RECORRERATRAS EN miListaDoble;
+
+MOSTRAR "Tamaño de la lista:";
+MOSTRAR TAMANO EN miListaDoble;
+
+
+// --- Test Lista Correcto ---
+CREAR LISTA_DOBLE_ENLAZADA miListaDoble;
+INSERTAR_INICIO 10 EN miListaDoble;
+INSERTAR_FINAL 20 EN miListaDoble;
+
+RECORRERADELANTE EN miListaDoble;
+RECORRERATRAS EN miListaDoble;
+
+MOSTRAR "Tamaño de la lista:";
+MOSTRAR TAMANO EN miListaDoble;
+
+// --- Test Lista Incorrecto ---
+CREAR LISTA_ENLAZADA miListaSimple;
+INSERTAR_INICIO 5 EN miListaSimple;
+
+// Error DSL(304): 'RECORRERATRAS' no es válido para una LISTA_ENLAZADA simple.
+RECORRERATRAS EN miListaSimple;
+
+// Error DSL(304): 'AGREGARNODO' es un comando de ARBOL, no de LISTA.
+AGREGARNODO 100 EN miListaSimple;
+
+// --- Test de Errores Cruzados entre Estructuras ---
+
+CREAR GRAFO miGrafo;
+CREAR ARBOL_BINARIO miArbol;
+CREAR TABLA_HASH miHash;
+
+// Error DSL(304): Usando comando de ARBOL ('AGREGARNODO') en un GRAFO.
+AGREGARNODO 10 EN miGrafo;
+
+// Error DSL(304): Usando comando de GRAFO ('BFS') en una TABLA_HASH.
+BFS EN miHash;
+
+// Error DSL(304): Usando comando de TABLA_HASH ('REHASH') en un ARBOL.
+REHASH EN miArbol;
+
+// Error DSL(305): Comparando estructuras complejas.
+IF (miGrafo == miArbol) {
+    MOSTRAR "Esto no tiene sentido y debería ser un error.";
+}
+

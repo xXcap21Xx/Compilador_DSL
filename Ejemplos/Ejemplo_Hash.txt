@@ -1,0 +1,21 @@
+// Declaración
+CREAR TABLA_HASH miDiccionario;
+
+// Operaciones válidas (requieren CLAVE y VALOR)
+INSERTAR 100 "cien" EN miDiccionario;
+INSERTAR 200 "doscientos" EN miDiccionario;
+INSERTAR 300 "trescientos" EN miDiccionario;
+
+// Buscar una clave
+BUSCAR 100 EN miDiccionario;
+BUSCAR 200 EN miDiccionario;
+
+// Actualizar el valor de una clave
+ACTUALIZAR 100 "CIEN MODIFICADO" EN miDiccionario;
+
+// Mantenimiento de la tabla (rehashing)
+REHASH EN miDiccionario;
+
+// Mostrar valores
+MOSTRAR 100;
+MOSTRAR "Tabla actualizada";

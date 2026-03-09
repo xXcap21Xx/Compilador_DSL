@@ -1,0 +1,13 @@
+// Declaración
+CREAR PILA miPila;
+CREAR PILA_CIRCULAR miPilaCircular;
+
+// Operaciones válidas
+APILAR 10 EN miPila;
+PUSH 20 EN miPila;
+
+// Propiedades y eliminación
+IF (TOPE EN miPila == 20) {
+    DESAPILAR EN miPila; // O también: POP EN miPila;
+}
+MOSTRAR miPila;

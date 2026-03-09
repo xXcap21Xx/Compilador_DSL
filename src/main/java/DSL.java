@@ -106,16 +106,31 @@ public class DSL {
         return transiciones;
     }
 
-    // ahora hacemos el set con los alfabetos 
+// ahora hacemos el set con los alfabetos completos
     public static Set<Character> getAlfabetoDSL() {
         Set<Character> alfabeto = new HashSet<>();
+        
+        // 1. Letras Mayúsculas
         for (char c = 'A'; c <= 'Z'; c++) {
             alfabeto.add(c);
         }
+        
+        // 2. Letras Minúsculas (¡Faltaba esto para validar variables como 'miCola'!)
+        for (char c = 'a'; c <= 'z'; c++) {
+            alfabeto.add(c);
+        }
+        
+        // 3. Números
         for (char c = '0'; c <= '9'; c++) {
             alfabeto.add(c);
         }
-        alfabeto.add('_');
+        
+        // 4. Símbolos especiales y de puntuación (¡Faltaba esto para los ';' y otros operadores!)
+        char[] simbolosExtras = {'_', ';', '=', '+', '-', '*', '/', '(', ')', '{', '}', '<', '>', '!', '&', '|', '.', '"', '[', ']', ','};
+        for (char c : simbolosExtras) {
+            alfabeto.add(c);
+        }
+        
         return alfabeto;
     }
 
@@ -130,7 +145,7 @@ public class DSL {
         cualquier otra cosa 
          */
         String regex = "(//.*)|"
-        + "(\"[^\"]*\"|\"[^\"]*)|" 
+        + "(\"[^\"]*\")|" // Grupo 2: Cadenas de texto
         + "(==|!=|<=|>=|&&|\\|\\|)|"
         + "([\\Q(){}[]|,;=+-*/<>\u0021&|.\\E])|"
         + "([^\\s\\Q(){}[]|,;=+-*/<>\u0021&|.\\E\"]+)";
@@ -148,18 +163,25 @@ public class DSL {
                 // iguala la variable token donde hay una coincidencia
                 String token = matcher.group();
 
-                // si obtiene una coincidecnia del grupo 1 es un comentario 
-                //por lo que lo ignora
+                // Grupo 1: Si es un comentario, lo ignoramos.
                 if (matcher.group(1) != null) {
                     continue;
                 }
-                // si el token es un espacio en blanco , lo ignora
+                
+                // Si el token es solo espacio en blanco, lo ignoramos.
                 if (token.trim().isEmpty()) {
                     continue;
                 }
+
                 int columna = matcher.start() + 1;
-                // agrega el token al arraylist
-                listaTokens.add(new Token(token, numLinea, columna));
+                // ¡LÓGICA CORREGIDA!
+                // Grupo 2: Si es una cadena de texto, creamos el token con el tipo "LITERAL_CADENA".
+                if (matcher.group(2) != null) {
+                    listaTokens.add(new Token(token, numLinea, columna, "LITERAL_CADENA"));
+                } else {
+                    // Para todo lo demás, creamos un token genérico que será clasificado después.
+                    listaTokens.add(new Token(token, numLinea, columna));
+                }
             }
             //una vez acaba todas las columnas aumenta la linea 
 

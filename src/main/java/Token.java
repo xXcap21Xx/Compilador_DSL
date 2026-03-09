@@ -27,6 +27,16 @@ public class Token {
         this.existeSimbolo = existeSimbolo;
     }
 
+    // Constructor para el método CrearToken cuando se identifica un tipo directamente (como CADENA)
+    public Token(String lexema, int linea, int columna, String tipoToken) {
+        this.lexema = lexema;
+        this.linea = linea;
+        this.columna = columna;
+        this.tipoToken = tipoToken;
+        // Asumimos que si se crea así, es un token válido y reconocido (como una cadena literal)
+        this.existeSimbolo = true; 
+    }
+
     // Getters
     public String getLexema() {
         return lexema;

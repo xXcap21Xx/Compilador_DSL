@@ -1,0 +1,13 @@
+// Declaración
+CREAR COLA filaBanco;
+CREAR BICOLA filaDoble;
+
+// Operaciones válidas
+ENCOLAR 1 EN filaBanco;
+ENQUEUE 2 EN filaBanco;
+
+// Propiedades y eliminación
+IF (FRENTE EN filaBanco == 1) {
+    DESENCOLAR EN filaBanco; // O también: DEQUEUE EN filaBanco;
+}
+VER_FILA EN filaBanco;

@@ -1,83 +1,85 @@
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Stack;
 
 /*
  ESTA CLASE ES LA "MEMORIA" DEL COMPILADOR (TABLA DE SÍMBOLOS).
- Su función es recordar todas las variables que el usuario ha declarado.
- 
- Cada vez que escribes "CREAR ENTERO X = 10;", esta clase guarda:
- - Clave: "X" (para buscarla rápido)
- - Datos: {nombre: "X", tipo: "ENTERO", valor: 10}
+ Ahora soporta "Ámbitos" (Scope). Las variables locales creadas dentro de 
+ un IF o FOR se destruirán automáticamente al terminar el bloque.
  */
 public class TablaSimbolos {
 
-    /*
-     EL ALMACÉN DE DATOS (Map)
-     Usamos un HashMap porque funciona como un diccionario:
-     Tú le das una palabra clave (el nombre de la variable) y él te devuelve
-     la definición (el objeto Simbolo) casi instantáneamente.
-     
-     - Key (String): El nombre de la variable (ej: "contador").
-     - Value (Simbolo): El objeto con toda la info.
-     */
-    private final Map<String, Simbolo> simbolos;
+    // Ahora usamos una Pila de Mapas. 
+    // La caja 0 es el ámbito global. La caja 1, 2, etc., son los ámbitos locales.
+    private final Stack<Map<String, Simbolo>> pilaAmbitos;
 
-    // CONSTRUCTOR
-    // Prepara la "libreta" vacía para empezar a anotar variables.
     public TablaSimbolos() {
-        this.simbolos = new HashMap<>();
+        this.pilaAmbitos = new Stack<>();
+        // Al arrancar, creamos el Ámbito Global por defecto
+        this.pilaAmbitos.push(new HashMap<>());
     }
 
-    /*
-     MÉTODO: INSERTAR (GUARDAR VARIABLE)
-     Este método se usa en dos momentos:
-     1. Cuando declaras una variable: "CREAR ENTERO A;"
-     2. Cuando actualizas una variable: "A = 20;" (aquí se sobrescribe el valor anterior).
-     
-     Recibe:
-     - nombre: "A"
-     - tipo: "ENTERO"
-     - valor: 20 (Se usa Object porque puede ser int, String, boolean, etc.)
-     */
+    // --- MAGIA DE LOS ÁMBITOS (SCOPE) ---
+    
+    // Se llama cuando el compilador entra a un IF, WHILE, FOR, etc.
+    public void entrarAmbito() {
+        pilaAmbitos.push(new HashMap<>()); 
+    }
+
+    // Se llama cuando el compilador sale de la llave de cierre "}"
+    public void salirAmbito() {
+        if (pilaAmbitos.size() > 1) { // Protegemos el ámbito global para no borrarlo
+            pilaAmbitos.pop(); // Destruimos la caja temporal y todas sus variables
+        }
+    }
+
+    // --- FUNCIONES TRADICIONALES ---
+
     public void insertar(String nombre, String tipo, Object valor) {
-        simbolos.put(nombre, new Simbolo(nombre, tipo, valor));
+        // Siempre se guarda en la caja de hasta arriba (el ámbito actual)
+        pilaAmbitos.peek().put(nombre, new Simbolo(nombre, tipo, valor));
     }
 
-    /*
-     MÉTODO: EXISTE (VALIDACIÓN)
-     El compilador usa esto para saber si cometiste un error.
-     Ejemplo: Si escribes "X = 5;" pero nunca creaste X, 
-     el compilador pregunta: ¿existe("X")? -> Si devuelve false, lanza error "Variable no declarada".
-     */
     public boolean existe(String nombre) {
-        return simbolos.containsKey(nombre);
+        // Busca de arriba hacia abajo (Primero en las locales, luego en la global)
+        for (int i = pilaAmbitos.size() - 1; i >= 0; i--) {
+            if (pilaAmbitos.get(i).containsKey(nombre)) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    /*
-     MÉTODO: OBTENER SÍMBOLO
-     Recupera toda la información de una variable.
-     Se usa cuando necesitas saber el TIPO de una variable para validar operaciones.
-     Ejemplo: Si intentas sumar "X + Y", el compilador pide los símbolos de X e Y
-     para ver si ambos son números.
-     */
     public Simbolo getSimbolo(String nombre) {
-        return simbolos.get(nombre);
+        // Retorna la primera que encuentre de arriba hacia abajo
+        for (int i = pilaAmbitos.size() - 1; i >= 0; i--) {
+            if (pilaAmbitos.get(i).containsKey(nombre)) {
+                return pilaAmbitos.get(i).get(nombre);
+            }
+        }
+        return null;
     }
 
-    // Limpia la memoria. Útil si reinicias la compilación sin cerrar el programa.
     public void limpiar() {
-        simbolos.clear();
+        pilaAmbitos.clear();
+        pilaAmbitos.push(new HashMap<>());
     }
 
-    /*
-     CLASE INTERNA: SIMBOLO
-     Es una clase auxiliar  que actúa como una "caja".
-     Solo sirve para agrupar los tres datos importantes de una variable en un solo objeto.
-     */
+    // --- PARA TU INTERFAZ GRÁFICA ---
+    // Este método une todas las variables vivas para que tu JTable no se rompa
+    public Map<String, Simbolo> getTodosLosSimbolos() {
+        Map<String, Simbolo> todos = new HashMap<>();
+        for (Map<String, Simbolo> ambito : pilaAmbitos) {
+            todos.putAll(ambito);
+        }
+        return todos;
+    }
+
+    /* CLASE INTERNA: SIMBOLO */
     public static class Simbolo {
         String nombre;
-        String tipo;    // Ej: "ENTERO", "TEXTO", "PILA"
-        Object valor;   // Ej: 10, "Hola", null
+        String tipo;   
+        Object valor;
 
         public Simbolo(String nombre, String tipo, Object valor) {
             this.nombre = nombre;

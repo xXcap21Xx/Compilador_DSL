@@ -41,7 +41,7 @@ public class MotorSintactico {
     
     public static ResultadoSintactico ejecutar(List<Token> tokensValidos) {
         ResultadoSintactico resultado = new ResultadoSintactico();
-
+        
         if (tokensValidos == null || tokensValidos.isEmpty()) {
             resultado.logArbol = "No hay tokens válidos para analizar.";
             return resultado;

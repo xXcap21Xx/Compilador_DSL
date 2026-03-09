@@ -1,0 +1,21 @@
+// Declaración
+CREAR LISTA_ENLAZADA miLista;
+CREAR LISTA_DOBLE_ENLAZADA miListaDoble;
+CREAR LISTA_CIRCULAR miListaCircular;
+
+// Operaciones válidas
+INSERTAR_INICIO 5 EN miLista;
+INSERTAR_FINAL 10 EN miLista;
+INSERTAR_EN_POSICION 2 7 EN miLista; // Posición 2, Valor 7
+
+// Búsqueda
+BUSCAR 10 EN miLista;
+
+// Recorridos y eliminación
+RECORRER EN miLista;
+RECORRERATRAS EN miListaDoble;
+ELIMINAR_FINAL EN miLista;
+ELIMINAR_INICIO EN miListaCircular;
+
+// Propiedades
+MOSTRAR TAMANO EN miLista;

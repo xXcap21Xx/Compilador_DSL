@@ -234,19 +234,19 @@ public class AnalizadorSintactico {
         // Verificamos si hay un signo '=' para asignarle valor inicial
         if (checar("=")) {
             consumir("=");
-            if (tipoDato.equals("TEXTO")) {
-                String val = tokenActual().getLexema();
-                consumir("CADENA"); 
-                nodoDecl.agregarHijo(new NodoAST(val, "CADENA", linea));
-            } else {
-                // Si es numérico u otro, evaluamos la expresión matemática
-                nodoDecl.agregarHijo(expresion());
-            }
+            // Ahora, tanto para TEXTO como para NUMERO, se evalúa como una expresión.
+            // El método expresion() ya sabe cómo manejar literales de cadena.
+            nodoDecl.agregarHijo(expresion());
         } else if (tokenActual().getTipoToken().contains("NUMERO")) {
-            // Soporte para sintaxis antigua sin el signo '='
+            // Soporte para sintaxis antigua sin el signo '=' para números
             String val = tokenActual().getLexema();
             avanzar();
             nodoDecl.agregarHijo(new NodoAST(val, "NUMERO", linea));
+        } else if (tokenActual().getTipoToken().equals("LITERAL_CADENA") || tokenActual().getTipoToken().contains("CADENA") || tokenActual().getTipoToken().contains("TEXTO")) {
+            // Soporte para sintaxis antigua sin el signo '=' para texto/cadenas
+            String val = tokenActual().getLexema();
+            avanzar();
+            nodoDecl.agregarHijo(new NodoAST(val, "CADENA", linea));
         }
 
         consumir(";"); // Siempre debe terminar en punto y coma
@@ -303,7 +303,21 @@ public class AnalizadorSintactico {
             nodoOp.agregarHijo(expresion());
         }
         
-        // --- CASO 5: Verbos Estándar (Ej: APILAR 10 EN PILA) ---
+        // --- CASO 5: TABLA_HASH (Ej: INSERTAR clave valor EN tabla) ---
+        else if (verbo.equals("INSERTAR") || verbo.equals("ACTUALIZAR")) {
+            // Primer parámetro: la CLAVE
+            nodoOp.agregarHijo(expresion());
+            
+            // Si vemos "EN" aquí, faltó el segundo parámetro (VALOR)
+            if (checar("EN")) {
+                throw error("Falta el VALOR para " + verbo + ". Sintaxis: " + verbo + " CLAVE VALOR EN TABLA", 205);
+            }
+            
+            // Segundo parámetro: el VALOR
+            nodoOp.agregarHijo(expresion());
+        }
+        
+        // --- CASO 6: Verbos Estándar (Ej: APILAR 10 EN PILA) ---
         else {
             // SI ENCONTRAMOS "EN" INMEDIATAMENTE, LANZAMOS ERROR.
             // Esto corrige el bug donde "APILAR EN PILA" era válido. Ahora exige un valor.
@@ -598,7 +612,7 @@ public class AnalizadorSintactico {
             return new NodoAST(val, "NUMERO", linea);
         }
         // Cadenas de texto
-        if (tipo.contains("CADENA") || tipo.contains("TEXTO")) {
+        if (tipo.contains("CADENA") || tipo.contains("TEXTO") || tipo.equals("LITERAL_CADENA")) {
             String val = tokenActual().getLexema();
             avanzar();
             return new NodoAST(val, "CADENA", linea);
@@ -623,6 +637,10 @@ public class AnalizadorSintactico {
     private boolean checar(String s) {
         if (esFin()) return false;
         Token t = tokenActual();
+        // Permitir que 'CADENA' acepte también 'LITERAL_CADENA'
+        if (s.equals("CADENA")) {
+            return t.getTipoToken().equals("CADENA") || t.getTipoToken().equals("LITERAL_CADENA");
+        }
         return t.getLexema().equalsIgnoreCase(s) || t.getTipoToken().equals(s);
     }
 
@@ -709,18 +727,20 @@ public class AnalizadorSintactico {
             "ELIMINAR_FRENTE", "ELIMINAR_POSICION", "ELIMINARNODO", "DESAPILAR", "POP",
             "DESENCOLAR", "DEQUEUE", "BUSCAR", "RECORRER", "BFS", "DFS", "AGREGARARISTA",
             "ELIMINARARISTA", "ACTUALIZAR", "REHASH", "CAMINOCORTO",
-            "INSERTAR_FRENTE", "VER_FILA", "VERFILA"
+            "INSERTAR_FRENTE", "VER_FILA", "VERFILA", "PREORDEN", "INORDEN", "POSTORDEN", "RECORRIDOPORNIVELES",
+            "RECORRERADELANTE", "RECORRERATRAS"
         ).contains(s);
     }
 
     private boolean esVerboSinParametros(String s) {
         // Lista de verbos que solo requieren "EN [ESTRUCTURA]" sin valor numérico
-        return Set.of(
-            "ELIMINAR", "DESAPILAR", "POP", "DESENCOLAR", "DEQUEUE",
-            "ELIMINAR_INICIO", "ELIMINAR_FINAL", "ELIMINAR_FRENTE",
-            "RECORRER", "RECORRERADELANTE", "RECORRERATRAS", "BFS", "DFS",
-            "PREORDEN", "INORDEN", "POSTORDEN", "RECORRIDOPORNIVELES", "VACIA"
-        ).contains(s);
+return Set.of(
+    "ELIMINAR", "DESAPILAR", "POP", "DESENCOLAR", "DEQUEUE",
+    "ELIMINAR_INICIO", "ELIMINAR_FINAL", "ELIMINAR_FRENTE",
+    "RECORRER", "RECORRERADELANTE", "RECORRERATRAS", "BFS", "DFS",
+    "PREORDEN", "INORDEN", "POSTORDEN", "RECORRIDOPORNIVELES", "VACIA",
+    "VER_FILA", "VERFILA", "REHASH"
+).contains(s);
     }
 
     private boolean esPropiedad(String s) {
@@ -728,7 +748,7 @@ public class AnalizadorSintactico {
         return Set.of(
             "TOPE", "FRENTE", "FRONT", "PEEK", "CLAVE", "TAMANO", "ALTURA", 
             "HOJAS", "NODOS", "VECINOS",
-            "VACIA", "LLENA", "GRADO", "VER_FILA", "VERFILA", "PREORDEN", "INORDEN", "POSTORDEN"
+            "VACIA", "LLENA", "GRADO", "VER_FILA", "VERFILA", "PREORDEN", "INORDEN", "POSTORDEN", "RECORRIDOPORNIVELES"
         ).contains(s);
     }
     
