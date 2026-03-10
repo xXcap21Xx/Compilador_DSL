@@ -31,6 +31,47 @@ public class AnalizadorSemantico {
         if (esBloque) {
             tablaSimbolos.entrarAmbito(); // ¡Creamos una caja temporal de memoria!
         }
+        
+        // ==========================================================
+        // 1.5. VALIDACIÓN DE ESTRUCTURAS DE CONTROL (IF, WHILE, FOR)
+        // ==========================================================
+        if (tipoNodo.equals("IF") || tipoNodo.equals("WHILE") || tipoNodo.equals("DO") || tipoNodo.equals("FOR")) {
+            if (nodo.getHijos() != null) {
+                for (NodoAST hijo : nodo.getHijos()) {
+                    String etiquetaHijo = hijo.getTipo() != null ? hijo.getTipo().toUpperCase().trim() : "";
+                    
+                    // Buscamos el nodo que contiene la condición a evaluar
+                    if (etiquetaHijo.equals("CONDICION") || etiquetaHijo.equals("EXPRESION")) {
+                        // Revisamos si la condición es simplemente una variable suelta o texto
+                        if (hijo.getHijos() != null) {
+                            for (NodoAST nieto : hijo.getHijos()) {
+                                String etiquetaNieto = nieto.getTipo() != null ? nieto.getTipo().toUpperCase().trim() : "";
+                                
+                                // Si pusieron una variable cruda en la condición (Ej: IF (miPila))
+                                if (etiquetaNieto.equals("ID_ESTRUCTURA") || etiquetaNieto.equals("ID_VAR") || 
+                                    etiquetaNieto.equals("ID") || etiquetaNieto.equals("IDENTIFICADOR")) {
+                                    
+                                    String nombreVar = nieto.getValor().trim();
+                                    if (tablaSimbolos.existe(nombreVar)) {
+                                        TablaSimbolos.Simbolo sim = tablaSimbolos.getSimbolo(nombreVar);
+                                        // Si no es número, es inválido usarlo como condición cruda
+                                        if (sim != null && !sim.tipo.equals("NUMERO") && !sim.tipo.equals("BOOLEANO")) {
+                                            tablaErrores.reporte(linea, "Semántico", 
+                                                "DSL(307) Condición Inválida: No puedes usar '" + nombreVar + "' (" + sim.tipo + ") directamente como condición. Usa una comparación (==, >) o una propiedad como VACIA.");
+                                        }
+                                    }
+                                } 
+                                // Si pusieron texto crudo (Ej: WHILE ("hola"))
+                                else if (etiquetaNieto.equals("LITERAL_CADENA") || etiquetaNieto.equals("CADENA")) {
+                                    tablaErrores.reporte(linea, "Semántico", 
+                                        "DSL(307) Condición Inválida: Un texto (" + nieto.getValor() + ") no puede ser evaluado como una condición lógica.");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         // ==========================================================
         // 2. DECLARAR VARIABLES (Guarda en la memoria y audita tipos)
@@ -202,7 +243,8 @@ private void validarCompatibilidad(String verbo, String tipoEstructura, String n
                 esValido = verbo.equals("APILAR") || verbo.equals("PUSH") || 
                            verbo.equals("DESAPILAR") || verbo.equals("POP") || 
                            verbo.equals("TOPE") || verbo.equals("PEEK") || 
-                           verbo.equals("VACIA") || verbo.equals("MOSTRAR");
+                           verbo.equals("VACIA") || verbo.equals("LLENA") || // <-- ¡AQUÍ ESTÁ!
+                           verbo.equals("MOSTRAR");
                 break;
                 
             case "COLA":
@@ -211,7 +253,8 @@ private void validarCompatibilidad(String verbo, String tipoEstructura, String n
                            verbo.equals("DESENCOLAR") || verbo.equals("DEQUEUE") || 
                            verbo.equals("FRENTE") || verbo.equals("FRONT") || 
                            verbo.equals("VER_FILA") || verbo.equals("VERFILA") || 
-                           verbo.equals("VACIA") || verbo.equals("MOSTRAR");
+                           verbo.equals("VACIA") || verbo.equals("LLENA") || // <-- ¡Y AQUÍ!
+                           verbo.equals("MOSTRAR");
                 break;
 
             // --- REGLAS PARA LISTAS (SEPARADAS PARA MAYOR PRECISIÓN) ---
