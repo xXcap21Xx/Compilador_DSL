@@ -48,6 +48,7 @@ import javax.swing.text.StyledDocument;
 
 import compilador.codegen.GeneradorCGI;
 import compilador.codegen.OptimizadorCGI;
+import compilador.codegen.asm.GeneradorEnsambladorGrafico;
 import compilador.codegen.asm.IntegradorSalidaASM;
 import compilador.core.Cuadruplo;
 import compilador.core.NodoAST;
@@ -70,6 +71,7 @@ public class Compilador extends JFrame {
     private JTextArea txtCodigoIntermedio;
     private JTextArea txtCodigoOptimizado;
     private JTextArea txtASM;
+    private JTextArea txtASMGrafico;
     
     // Archivo de salida ASM seleccionado
     private String nombreBaseSalidaASM = "salida";
@@ -432,6 +434,12 @@ public class Compilador extends JFrame {
         txtASM.setFont(new Font("Consolas", Font.PLAIN, 12));
         txtASM.setForeground(new Color(30, 30, 30));
         JScrollPane scrollASM = new JScrollPane(txtASM);
+        txtASMGrafico = new JTextArea();
+        txtASMGrafico.setEditable(false);
+        txtASMGrafico.setFont(new Font("Consolas", Font.PLAIN, 12));
+        txtASMGrafico.setForeground(new Color(45, 45, 45));
+        JScrollPane scrollASMGrafico = new JScrollPane(txtASMGrafico);
+        pestañas.addTab("Ensamblador Grafico (ASM)", scrollASMGrafico);
         pestañas.addTab("Ensamblador (ASM)", scrollASM);
         // --- FIN CÓDIGO NUEVO ---
         // 5. ERRORES
@@ -538,6 +546,7 @@ public class Compilador extends JFrame {
         if(txtCodigoIntermedio != null) txtCodigoIntermedio.setText(""); // <--- AGREGA ESTA LÍNEA
         if(txtCodigoOptimizado != null) txtCodigoOptimizado.setText("");
         if(txtASM != null) txtASM.setText("");
+        if(txtASMGrafico != null) txtASMGrafico.setText("");
         raizAST = null;
         lblResumen.setForeground(Color.BLACK);
         lblResumen.setText("Analizando...");
@@ -680,6 +689,7 @@ public class Compilador extends JFrame {
                         integrador.generarArchivosCompletos();
                         txtASM.setText(integrador.obtenerCodigoEnsamblador());
                         txtASM.setCaretPosition(0);
+                        generarEnsambladorGrafico(codigoOptimizado);
                         lblResumen.setText(" Compilación exitosa. Archivos ASM generados: " + nombreBaseSalidaASM + ".asm");
                         lblResumen.setForeground(new Color(0, 128, 0));
                     } catch (Exception exAsm) {
@@ -705,6 +715,28 @@ public class Compilador extends JFrame {
     }
 
     // --- MÉTODOS DE ARCHIVO ---
+    private void generarEnsambladorGrafico(java.util.List<Cuadruplo> codigoOptimizado) {
+        try {
+            GeneradorEnsambladorGrafico generadorGrafico = new GeneradorEnsambladorGrafico();
+            generadorGrafico.procesarCuadruplos(codigoOptimizado);
+            String asmGrafico = generadorGrafico.obtenerCodigoEnsamblador();
+
+            if (txtASMGrafico != null) {
+                txtASMGrafico.setText(asmGrafico);
+                txtASMGrafico.setCaretPosition(0);
+            }
+
+            String archivoGrafico = nombreBaseSalidaASM + "_grafico.asm";
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(archivoGrafico))) {
+                writer.write(asmGrafico);
+            }
+        } catch (Exception exGrafico) {
+            if (txtASMGrafico != null) {
+                txtASMGrafico.setText("Error al generar ASM grafico:\n" + exGrafico.getMessage());
+            }
+        }
+    }
+
     private void abrirArchivo() {
         JFileChooser selector = new JFileChooser();
         selector.setDialogTitle("Abrir archivo de código DSL");
