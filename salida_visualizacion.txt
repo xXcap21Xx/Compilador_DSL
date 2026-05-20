@@ -5,19 +5,10 @@
 
 CUÁDRUPLOS GENERADOS:
 ──────────────────────────────────────────────────────────────────────
-  0: ALLOC           100                  PILA                 -> miPila
-  1: APILAR          1                                         -> miPila
-  2: APILAR          2                                         -> miPila
-  3: APILAR          3                                         -> miPila
-  4: TOPE            miPila                                    -> T1
-  5: PRINT           T1                                        -> 
-  6: VACIA           miPila                                    -> T2
-  7: IF_FALSE        T2                   GOTO                 -> L1
-  8: ERROR           Estructura vacía                          -> 
-  9: ETIQUETA                                                  -> L1
- 10: DESAPILAR                                                 -> miPila
- 11: TOPE            miPila                                    -> T3
- 12: PRINT           T3                                        -> 
+  0: PRINT           15                                        -> 
+  1: PRINT           5                                         -> 
+  2: PRINT           50                                        -> 
+  3: PRINT           "Código Intermedio OK"                      -> 
 
 ══════════════════════════════════════════════════════════════════════
 

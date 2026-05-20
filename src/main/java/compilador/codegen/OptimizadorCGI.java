@@ -1,91 +1,90 @@
 package compilador.codegen;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import compilador.core.Cuadruplo;
 
 /**
- * Optimizador sencillo de Código Intermedio (Cuádruplos)
- * Implementa algunas optimizaciones simples:
- *  - Eliminación de asignaciones redundantes (t = t)
- *  - Plegado de constantes para operaciones básicas con literales
- *  - Eliminación de cuádruplos no usados (muy simple, basada en uso de resultados)
+ * Optimizador conservador de codigo intermedio basado en cuadruplos.
+ *
+ * Aplica:
+ * - plegado de constantes aritmeticas y comparaciones
+ * - simplificaciones algebraicas seguras
+ * - propagacion de copias/constantes sin cruzar saltos ni etiquetas
+ * - simplificacion de saltos con condiciones constantes
+ * - eliminacion de saltos redundantes e instrucciones inalcanzables simples
+ * - eliminacion de codigo muerto solo para temporales
  */
 public class OptimizadorCGI {
 
+    private static final int MAX_PASADAS = 6;
+
     public List<Cuadruplo> optimizar(List<Cuadruplo> codigo) {
-        if (codigo == null) return Collections.emptyList();
+        if (codigo == null) {
+            return Collections.emptyList();
+        }
 
-        // 1) Plegado de constantes y eliminación local simple
-        List<Cuadruplo> paso1 = new ArrayList<>();
-        for (Cuadruplo c : codigo) {
-            if (c == null) continue;
+        List<Cuadruplo> actual = copiarCodigo(codigo);
 
-            // eliminar asignaciones redundantes: x = x
-            if ("=".equals(c.operador) && c.resultado != null && c.argumento1 != null
-                    && c.resultado.equals(c.argumento1)) {
+        for (int i = 0; i < MAX_PASADAS; i++) {
+            String antes = firma(actual);
+
+            actual = simplificarOperaciones(actual);
+            actual = propagarCopiasYConstantes(actual);
+            actual = simplificarOperaciones(actual);
+            actual = simplificarSaltos(actual);
+            actual = eliminarCodigoInalcanzable(actual);
+            actual = eliminarCodigoMuerto(actual);
+
+            if (antes.equals(firma(actual))) {
+                break;
+            }
+        }
+
+        return actual;
+    }
+
+    private List<Cuadruplo> simplificarOperaciones(List<Cuadruplo> codigo) {
+        List<Cuadruplo> salida = new ArrayList<>();
+
+        for (Cuadruplo original : codigo) {
+            if (original == null || original.operador == null) {
                 continue;
             }
 
-            // plegado de constantes: a = 2 + 3 -> a = 5
-            if (c.argumento1 != null && c.argumento2 != null && isNumeric(c.argumento1) && isNumeric(c.argumento2)
-                    && isArithmeticOperator(c.operador)) {
-                try {
-                    long v1 = Long.parseLong(c.argumento1);
-                    long v2 = Long.parseLong(c.argumento2);
-                    long res = 0;
-                    switch (c.operador) {
-                        case "+": res = v1 + v2; break;
-                        case "-": res = v1 - v2; break;
-                        case "*": res = v1 * v2; break;
-                        case "/": if (v2 != 0) res = v1 / v2; else { paso1.add(c); continue; } break;
-                        default: paso1.add(c); continue;
-                    }
-                    paso1.add(new Cuadruplo("=", Long.toString(res), null, c.resultado));
+            Cuadruplo c = copiar(original);
+            String op = c.operador;
+
+            if ("=".equals(op) && mismoValor(c.resultado, c.argumento1)) {
+                continue;
+            }
+
+            if (isArithmeticOperator(op)) {
+                Cuadruplo simplificado = simplificarAritmetica(c);
+                if (simplificado != null) {
+                    salida.add(simplificado);
                     continue;
-                } catch (NumberFormatException ex) {
-                    // caemos al manejo normal
                 }
             }
 
-            paso1.add(c);
-        }
-
-        // 2) Propagación de copias (copy propagation) - sustitución simple de x = y
-        List<Cuadruplo> paso2 = copyPropagation(paso1);
-
-        // 3) Eliminación de código muerto iterativa basada en uso (backward liveness)
-        List<Cuadruplo> paso3 = eliminarCodigoMuerto(paso2);
-
-        return paso3;
-    }
-
-    private List<Cuadruplo> copyPropagation(List<Cuadruplo> codigo) {
-        Map<String, String> copia = new HashMap<>();
-        List<Cuadruplo> salida = new ArrayList<>();
-
-        for (Cuadruplo c : codigo) {
-            if (c == null) continue;
-
-            // remplazar argumentos por copia conocida
-            if (c.argumento1 != null && copia.containsKey(c.argumento1)) {
-                c.argumento1 = copia.get(c.argumento1);
-            }
-            if (c.argumento2 != null && copia.containsKey(c.argumento2)) {
-                c.argumento2 = copia.get(c.argumento2);
+            if (isComparisonOperator(op) && isNumeric(c.argumento1) && isNumeric(c.argumento2)) {
+                boolean resultado = calcularComparacion(op, Long.parseLong(c.argumento1), Long.parseLong(c.argumento2));
+                salida.add(new Cuadruplo("=", resultado ? "1" : "0", "", c.resultado));
+                continue;
             }
 
-            // Si es una asignación simple: t = x  (operador "=") y no implica operaciones
-            if ("=".equals(c.operador) && c.argumento2 == null && c.argumento1 != null) {
-                // registrar copia t -> x
-                copia.put(c.resultado, c.argumento1);
-            } else {
-                // cualquier escritura invalida copias que referencien a la variable result
-                if (c.resultado != null) {
-                    // eliminar mapeos que definen o usan la variable reescrita
-                    copia.remove(c.resultado);
-                    // también limpiar entradas cuyo valor sea la variable reescrita
-                    copia.values().removeIf(v -> v.equals(c.resultado));
+            if (("IF_FALSE".equals(op) || "IF_TRUE".equals(op)) && isNumeric(c.argumento1)) {
+                boolean condicion = Long.parseLong(c.argumento1) != 0;
+                if (("IF_FALSE".equals(op) && !condicion) || ("IF_TRUE".equals(op) && condicion)) {
+                    salida.add(new Cuadruplo("GOTO", "", "", c.resultado));
                 }
+                continue;
             }
 
             salida.add(c);
@@ -94,82 +93,385 @@ public class OptimizadorCGI {
         return salida;
     }
 
-    private List<Cuadruplo> eliminarCodigoMuerto(List<Cuadruplo> codigo) {
-        List<Cuadruplo> current = new ArrayList<>(codigo);
-        boolean changed = true;
+    private Cuadruplo simplificarAritmetica(Cuadruplo c) {
+        String op = c.operador;
+        String a = c.argumento1;
+        String b = c.argumento2;
+        String r = c.resultado;
 
-        while (changed) {
-            changed = false;
-            Set<String> usados = new HashSet<>();
-
-            // Semilla: variables usadas por efectos secundarios y saltos
-            for (Cuadruplo c : current) {
-                if (c == null) continue;
-                if (esEfectoSecundario(c) || "GOTO".equals(c.operador) || c.operador.startsWith("IF")) {
-                    if (c.argumento1 != null) usados.add(c.argumento1);
-                    if (c.argumento2 != null) usados.add(c.argumento2);
-                }
+        if (isNumeric(a) && isNumeric(b)) {
+            Long resultado = calcularAritmetica(op, Long.parseLong(a), Long.parseLong(b));
+            if (resultado != null) {
+                return new Cuadruplo("=", Long.toString(resultado), "", r);
             }
-
-            List<Cuadruplo> nuevo = new ArrayList<>();
-
-            // Recorrer hacia atrás y conservar instrucciones que definan variables usadas
-            for (int i = current.size() - 1; i >= 0; i--) {
-                Cuadruplo c = current.get(i);
-                if (c == null) continue;
-
-                boolean conservar = false;
-
-                if ("ETIQUETA".equals(c.operador) || "GOTO".equals(c.operador) || c.operador.startsWith("IF") || esEfectoSecundario(c)) {
-                    // siempre conservar saltos, etiquetas y efectos
-                    conservar = true;
-                } else if (c.resultado == null) {
-                    // instrucciones sin resultado, conservar
-                    conservar = true;
-                } else if (usados.contains(c.resultado)) {
-                    conservar = true;
-                }
-
-                if (conservar) {
-                    nuevo.add(0, c);
-                    if (c.argumento1 != null) usados.add(c.argumento1);
-                    if (c.argumento2 != null) usados.add(c.argumento2);
-                } else {
-                    // se elimina: marcar cambio
-                    changed = true;
-                }
-            }
-
-            current = nuevo;
         }
 
-        return current;
+        if ("+".equals(op)) {
+            if (esCero(b)) return new Cuadruplo("=", a, "", r);
+            if (esCero(a)) return new Cuadruplo("=", b, "", r);
+        }
+
+        if ("-".equals(op)) {
+            if (esCero(b)) return new Cuadruplo("=", a, "", r);
+            if (mismoValor(a, b)) return new Cuadruplo("=", "0", "", r);
+        }
+
+        if ("*".equals(op)) {
+            if (esCero(a) || esCero(b)) return new Cuadruplo("=", "0", "", r);
+            if (esUno(b)) return new Cuadruplo("=", a, "", r);
+            if (esUno(a)) return new Cuadruplo("=", b, "", r);
+        }
+
+        if ("/".equals(op)) {
+            if (esUno(b)) return new Cuadruplo("=", a, "", r);
+            if (esCero(a) && !esCero(b)) return new Cuadruplo("=", "0", "", r);
+        }
+
+        return null;
+    }
+
+    private List<Cuadruplo> propagarCopiasYConstantes(List<Cuadruplo> codigo) {
+        Map<String, String> reemplazos = new HashMap<>();
+        List<Cuadruplo> salida = new ArrayList<>();
+
+        for (Cuadruplo original : codigo) {
+            if (original == null || original.operador == null) {
+                continue;
+            }
+
+            Cuadruplo c = copiar(original);
+
+            if ("ETIQUETA".equals(c.operador)) {
+                reemplazos.clear();
+                salida.add(c);
+                continue;
+            }
+
+            c.argumento1 = resolver(c.argumento1, reemplazos);
+            c.argumento2 = resolver(c.argumento2, reemplazos);
+
+            salida.add(c);
+
+            if ("GOTO".equals(c.operador) || c.operador.startsWith("IF")) {
+                reemplazos.clear();
+                continue;
+            }
+
+            if (esEfectoSecundario(c)) {
+                invalidarResultado(c.resultado, reemplazos);
+                if (esBarreraPropagacion(c)) {
+                    reemplazos.clear();
+                }
+                continue;
+            }
+
+            if (esIdentificador(c.resultado)) {
+                invalidarResultado(c.resultado, reemplazos);
+            }
+
+            if ("=".equals(c.operador) && esIdentificador(c.resultado) && esValorPropagable(c.argumento1)) {
+                reemplazos.put(c.resultado, c.argumento1);
+            }
+        }
+
+        return salida;
+    }
+
+    private List<Cuadruplo> simplificarSaltos(List<Cuadruplo> codigo) {
+        List<Cuadruplo> redirigido = redirigirEtiquetasConsecutivas(codigo);
+        List<Cuadruplo> salida = new ArrayList<>();
+
+        for (int i = 0; i < redirigido.size(); i++) {
+            Cuadruplo c = redirigido.get(i);
+            if ("GOTO".equals(c.operador) && i + 1 < redirigido.size()) {
+                Cuadruplo siguiente = redirigido.get(i + 1);
+                if ("ETIQUETA".equals(siguiente.operador) && mismoValor(c.resultado, siguiente.resultado)) {
+                    continue;
+                }
+            }
+            salida.add(c);
+        }
+
+        return salida;
+    }
+
+    private List<Cuadruplo> redirigirEtiquetasConsecutivas(List<Cuadruplo> codigo) {
+        Map<String, String> reemplazoEtiquetas = new HashMap<>();
+        List<Cuadruplo> salida = new ArrayList<>();
+
+        for (int i = 0; i < codigo.size(); i++) {
+            Cuadruplo c = codigo.get(i);
+            if (!"ETIQUETA".equals(c.operador)) {
+                salida.add(copiar(c));
+                continue;
+            }
+
+            String etiquetaCanonica = c.resultado;
+            salida.add(copiar(c));
+
+            int j = i + 1;
+            while (j < codigo.size() && "ETIQUETA".equals(codigo.get(j).operador)) {
+                reemplazoEtiquetas.put(codigo.get(j).resultado, etiquetaCanonica);
+                j++;
+            }
+            i = j - 1;
+        }
+
+        if (reemplazoEtiquetas.isEmpty()) {
+            return salida;
+        }
+
+        List<Cuadruplo> redirigido = new ArrayList<>();
+        for (Cuadruplo c : salida) {
+            Cuadruplo copia = copiar(c);
+            if (("GOTO".equals(copia.operador) || copia.operador.startsWith("IF"))
+                    && reemplazoEtiquetas.containsKey(copia.resultado)) {
+                copia.resultado = reemplazoEtiquetas.get(copia.resultado);
+            }
+            redirigido.add(copia);
+        }
+
+        return redirigido;
+    }
+
+    private List<Cuadruplo> eliminarCodigoInalcanzable(List<Cuadruplo> codigo) {
+        List<Cuadruplo> salida = new ArrayList<>();
+        boolean inalcanzable = false;
+
+        for (Cuadruplo c : codigo) {
+            if (c == null) {
+                continue;
+            }
+
+            if ("ETIQUETA".equals(c.operador)) {
+                inalcanzable = false;
+                salida.add(c);
+                continue;
+            }
+
+            if (inalcanzable) {
+                continue;
+            }
+
+            salida.add(c);
+            if ("GOTO".equals(c.operador)) {
+                inalcanzable = true;
+            }
+        }
+
+        return salida;
+    }
+
+    private List<Cuadruplo> eliminarCodigoMuerto(List<Cuadruplo> codigo) {
+        Set<String> usados = new HashSet<>();
+        List<Cuadruplo> salida = new ArrayList<>();
+
+        for (int i = codigo.size() - 1; i >= 0; i--) {
+            Cuadruplo c = codigo.get(i);
+            if (c == null) {
+                continue;
+            }
+
+            boolean conservar = esControl(c) || esEfectoSecundario(c)
+                    || c.resultado == null || usados.contains(c.resultado);
+
+            if (conservar) {
+                salida.add(0, c);
+                if (esIdentificador(c.resultado)) {
+                    usados.remove(c.resultado);
+                }
+                agregarUso(c.argumento1, usados);
+                agregarUso(c.argumento2, usados);
+            }
+        }
+
+        return salida;
+    }
+
+    private Long calcularAritmetica(String op, long v1, long v2) {
+        switch (op) {
+            case "+": return v1 + v2;
+            case "-": return v1 - v2;
+            case "*": return v1 * v2;
+            case "/": return v2 == 0 ? null : v1 / v2;
+            default: return null;
+        }
+    }
+
+    private boolean calcularComparacion(String op, long v1, long v2) {
+        switch (op) {
+            case "<": return v1 < v2;
+            case ">": return v1 > v2;
+            case "==": return v1 == v2;
+            case "!=": return v1 != v2;
+            case "<=": return v1 <= v2;
+            case ">=": return v1 >= v2;
+            default: return false;
+        }
+    }
+
+    private void invalidarResultado(String resultado, Map<String, String> reemplazos) {
+        if (!esIdentificador(resultado)) {
+            return;
+        }
+        reemplazos.remove(resultado);
+        reemplazos.values().removeIf(resultado::equals);
+    }
+
+    private void agregarUso(String valor, Set<String> usados) {
+        if (esIdentificador(valor)) {
+            usados.add(valor);
+        }
+    }
+
+    private String resolver(String valor, Map<String, String> reemplazos) {
+        String actual = valor;
+        Set<String> visitados = new HashSet<>();
+        while (esIdentificador(actual) && reemplazos.containsKey(actual) && visitados.add(actual)) {
+            actual = reemplazos.get(actual);
+        }
+        return actual;
+    }
+
+    private List<Cuadruplo> copiarCodigo(List<Cuadruplo> codigo) {
+        List<Cuadruplo> copia = new ArrayList<>();
+        for (Cuadruplo c : codigo) {
+            if (c != null) {
+                copia.add(copiar(c));
+            }
+        }
+        return copia;
+    }
+
+    private Cuadruplo copiar(Cuadruplo c) {
+        return new Cuadruplo(c.operador, c.argumento1, c.argumento2, c.resultado);
+    }
+
+    private String firma(List<Cuadruplo> codigo) {
+        StringBuilder sb = new StringBuilder();
+        for (Cuadruplo c : codigo) {
+            sb.append(valor(c.operador)).append('|')
+                    .append(valor(c.argumento1)).append('|')
+                    .append(valor(c.argumento2)).append('|')
+                    .append(valor(c.resultado)).append('\n');
+        }
+        return sb.toString();
+    }
+
+    private boolean esControl(Cuadruplo c) {
+        return c != null && c.operador != null
+                && ("ETIQUETA".equals(c.operador) || "GOTO".equals(c.operador) || c.operador.startsWith("IF"));
     }
 
     private boolean isNumeric(String s) {
-        if (s == null) return false;
-        return s.matches("-?\\d+");
+        return s != null && s.matches("-?\\d+");
     }
 
     private boolean isArithmeticOperator(String op) {
         return "+".equals(op) || "-".equals(op) || "*".equals(op) || "/".equals(op);
     }
 
+    private boolean isComparisonOperator(String op) {
+        return "<".equals(op) || ">".equals(op) || "==".equals(op) || "!=".equals(op)
+                || "<=".equals(op) || ">=".equals(op);
+    }
+
+    private boolean esValorPropagable(String valor) {
+        return !vacio(valor) && (isNumeric(valor) || esCadena(valor) || esIdentificador(valor));
+    }
+
+    private boolean esIdentificador(String valor) {
+        return valor != null && valor.matches("[A-Za-z_][A-Za-z0-9_]*");
+    }
+
+    private boolean esTemporal(String valor) {
+        return valor != null && valor.matches("T\\d+");
+    }
+
+    private boolean esCadena(String valor) {
+        return valor != null && valor.length() >= 2 && valor.startsWith("\"") && valor.endsWith("\"");
+    }
+
+    private boolean esCero(String valor) {
+        return "0".equals(valor);
+    }
+
+    private boolean esUno(String valor) {
+        return "1".equals(valor);
+    }
+
+    private boolean mismoValor(String a, String b) {
+        return valor(a).equals(valor(b));
+    }
+
+    private boolean vacio(String valor) {
+        return valor == null || valor.isEmpty();
+    }
+
+    private String valor(String texto) {
+        return texto == null ? "" : texto;
+    }
+
     private boolean esEfectoSecundario(Cuadruplo c) {
-        if (c == null) return false;
-        if (c.operador == null) return false;
+        if (c == null || c.operador == null) {
+            return false;
+        }
 
         String op = c.operador.toUpperCase();
-        return Set.of(
-                "PRINT", "MOSTRAR", "ALLOC", "FREE", "ERROR",
-                "INSERTAR", "INSERTAR_FINAL", "INSERTAR_INICIO", "INSERTAR_EN_POSICION",
-                "INSERTAR_FRENTE", "AGREGARNODO", "ELIMINARNODO",
-                "APILAR", "PUSH", "DESAPILAR", "POP",
-                "ENCOLAR", "ENQUEUE", "DESENCOLAR", "DEQUEUE",
-                "ELIMINAR", "ELIMINAR_INICIO", "ELIMINAR_FINAL", "ELIMINAR_FRENTE",
-                "ELIMINAR_POSICION", "BUSCAR", "RECORRER", "BFS", "DFS",
-                "AGREGARARISTA", "ELIMINARARISTA", "ACTUALIZAR", "REHASH",
-                "CAMINOCORTO"
-        ).contains(op);
+        switch (op) {
+            case "PRINT":
+            case "MOSTRAR":
+            case "ALLOC":
+            case "FREE":
+            case "ERROR":
+            case "INSERTAR":
+            case "INSERTAR_FINAL":
+            case "INSERTAR_INICIO":
+            case "INSERTAR_EN_POSICION":
+            case "INSERTAR_FRENTE":
+            case "AGREGARNODO":
+            case "ELIMINARNODO":
+            case "APILAR":
+            case "PUSH":
+            case "DESAPILAR":
+            case "POP":
+            case "ENCOLAR":
+            case "ENQUEUE":
+            case "DESENCOLAR":
+            case "DEQUEUE":
+            case "ELIMINAR":
+            case "ELIMINAR_INICIO":
+            case "ELIMINAR_FINAL":
+            case "ELIMINAR_FRENTE":
+            case "ELIMINAR_POSICION":
+            case "BUSCAR":
+            case "RECORRER":
+            case "BFS":
+            case "DFS":
+            case "AGREGARARISTA":
+            case "ELIMINARARISTA":
+            case "ACTUALIZAR":
+            case "REHASH":
+            case "CAMINOCORTO":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private boolean esBarreraPropagacion(Cuadruplo c) {
+        if (c == null || c.operador == null) {
+            return false;
+        }
+
+        String op = c.operador.toUpperCase();
+        switch (op) {
+            case "PRINT":
+            case "MOSTRAR":
+            case "ERROR":
+                return false;
+            default:
+                return esEfectoSecundario(c);
+        }
     }
 }

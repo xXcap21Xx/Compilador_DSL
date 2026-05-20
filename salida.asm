@@ -11,11 +11,7 @@
     newline db 0Dh, 0Ah, '$'
     msg_error db 'Error en la operacion', 0Dh, 0Ah, '$'
 
-    miPila dw 100 dup(0)
-    miPila_top dw 0
-    T1 dw 0
-    T2 dw 0
-    T3 dw 0
+    msg_1 db 'Código Intermedio OK', '$'
 
 .code
 main proc
@@ -24,81 +20,24 @@ main proc
     mov dx, offset titulo
     call print_string
 
-    ; CREAR PILA miPila TAMANO 100
-    ; APILAR 1 EN miPila
-    mov ax, 1
-    mov bx, [miPila_top]
-    shl bx, 1
-    mov miPila[bx], ax
-    inc word ptr [miPila_top]
-    ; APILAR 2 EN miPila
-    mov ax, 2
-    mov bx, [miPila_top]
-    shl bx, 1
-    mov miPila[bx], ax
-    inc word ptr [miPila_top]
-    ; APILAR 3 EN miPila
-    mov ax, 3
-    mov bx, [miPila_top]
-    shl bx, 1
-    mov miPila[bx], ax
-    inc word ptr [miPila_top]
-    ; TOPE EN miPila
-    cmp word ptr [miPila_top], 0
-    je ASM_L1
-    mov bx, [miPila_top]
-    dec bx
-    shl bx, 1
-    mov ax, miPila[bx]
-    mov [T1], ax
-    jmp ASM_L2
-ASM_L1:
-    mov word ptr [T1], 0
-ASM_L2:
-    ; PRINT T1
-    mov ax, [T1]
+    ; PRINT 15
+    mov ax, 15
     call print_num
     mov dx, offset newline
     call print_string
-    ; VACIA
-    mov word ptr [T2], 0
-    cmp word ptr [miPila_top], 0
-    je ASM_L3
-    jmp ASM_L4
-ASM_L3:
-    mov word ptr [T2], 1
-ASM_L4:
-    ; IF_FALSE T2 GOTO L1
-    mov ax, [T2]
-    cmp ax, 0
-    je L1
-    ; ERROR: Estructura vacía 
-    mov dx, offset msg_error
-    call print_string
-L1:
-    ; DESAPILAR EN miPila
-    cmp word ptr [miPila_top], 0
-    je ASM_L5
-    dec word ptr [miPila_top]
-    mov bx, [miPila_top]
-    shl bx, 1
-    mov word ptr miPila[bx], 0
-ASM_L5:
-    ; TOPE EN miPila
-    cmp word ptr [miPila_top], 0
-    je ASM_L6
-    mov bx, [miPila_top]
-    dec bx
-    shl bx, 1
-    mov ax, miPila[bx]
-    mov [T3], ax
-    jmp ASM_L7
-ASM_L6:
-    mov word ptr [T3], 0
-ASM_L7:
-    ; PRINT T3
-    mov ax, [T3]
+    ; PRINT 5
+    mov ax, 5
     call print_num
+    mov dx, offset newline
+    call print_string
+    ; PRINT 50
+    mov ax, 50
+    call print_num
+    mov dx, offset newline
+    call print_string
+    ; PRINT "Código Intermedio OK"
+    mov dx, offset msg_1
+    call print_string
     mov dx, offset newline
     call print_string
 

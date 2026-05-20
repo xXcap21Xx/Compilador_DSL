@@ -16,10 +16,7 @@
     rect_w dw 0
     rect_h dw 0
     rect_color db 0
-    miPila dw 100 dup(0)
-    miPila_top dw 0
-    T1 dw 0
-    T3 dw 0
+    "Código Intermedio OK" dw 0
 
 .code
 main proc
@@ -30,58 +27,17 @@ main proc
     mov ax, 0013h
     int 10h
 
-    ; CREAR PILA miPila TAMANO 100
-    call GRAFICAR_TODO
-    ; APILAR 1 EN miPila
-    cmp word ptr [miPila_top], 100
-    jge GFX_L1
-    mov ax, 1
-    mov bx, [miPila_top]
-    shl bx, 1
-    mov miPila[bx], ax
-    inc word ptr [miPila_top]
-GFX_L1:
-    call GRAFICAR_TODO
-    ; APILAR 2 EN miPila
-    cmp word ptr [miPila_top], 100
-    jge GFX_L2
-    mov ax, 2
-    mov bx, [miPila_top]
-    shl bx, 1
-    mov miPila[bx], ax
-    inc word ptr [miPila_top]
-GFX_L2:
-    call GRAFICAR_TODO
-    ; APILAR 3 EN miPila
-    cmp word ptr [miPila_top], 100
-    jge GFX_L3
-    mov ax, 3
-    mov bx, [miPila_top]
-    shl bx, 1
-    mov miPila[bx], ax
-    inc word ptr [miPila_top]
-GFX_L3:
-    call GRAFICAR_TODO
-    ; Operacion grafica pendiente: TOPE miPila  -> T1
-    ; MOSTRAR T1 en modo grafico
-    mov ax, [T1]
+    ; MOSTRAR 15 en modo grafico
+    mov ax, 15
     call PRINT_NUM_GRAFICO
-    ; Operacion grafica pendiente: VACIA miPila  -> T2
-    ; Operacion grafica pendiente: IF_FALSE T2 GOTO -> L1
-    ; Operacion grafica pendiente: ERROR Estructura vacía  -> 
-    ; Operacion grafica pendiente: ETIQUETA   -> L1
-    ; DESAPILAR EN miPila
-    cmp word ptr [miPila_top], 0
-    je GFX_L4
-    dec word ptr [miPila_top]
-    mov bx, [miPila_top]
-    shl bx, 1
-    mov word ptr miPila[bx], 0
-GFX_L4:
-    call GRAFICAR_TODO
-    ; Operacion grafica pendiente: TOPE miPila  -> T3
-    ; MOSTRAR T3 en modo grafico
-    mov ax, [T3]
+    ; MOSTRAR 5 en modo grafico
+    mov ax, 5
+    call PRINT_NUM_GRAFICO
+    ; MOSTRAR 50 en modo grafico
+    mov ax, 50
+    call PRINT_NUM_GRAFICO
+    ; MOSTRAR "Código Intermedio OK" en modo grafico
+    mov ax, ["Código Intermedio OK"]
     call PRINT_NUM_GRAFICO
     call GRAFICAR_TODO
     mov ah, 00h
@@ -219,38 +175,7 @@ PRINT_NUM_GRAFICO endp
 
 GRAFICAR_TODO proc
     call LIMPIAR_PANTALLA
-    call GRAFICAR_PILA_miPila
     ret
 GRAFICAR_TODO endp
-
-GRAFICAR_PILA_miPila proc
-    mov word ptr [gfx_i], 0
-miPila_gp_loop:
-    mov ax, [gfx_i]
-    cmp ax, [miPila_top]
-    jge miPila_gp_fin
-    mov bx, ax
-    shl bx, 1
-    mov ax, miPila[bx]
-    mov [gfx_valor], ax
-    mov ax, [gfx_i]
-    mov bx, 12
-    mul bx
-    mov dx, 180
-    sub dx, ax
-    mov cx, 10
-    mov si, 42
-    mov di, 10
-    mov al, 0Ah
-    call DIBUJAR_RECTANGULO
-    mov cx, 22
-    call SET_CURSOR_PIXEL
-    mov ax, [gfx_valor]
-    call PRINT_NUM_GRAFICO
-    inc word ptr [gfx_i]
-    jmp miPila_gp_loop
-miPila_gp_fin:
-    ret
-GRAFICAR_PILA_miPila endp
 
 end main
