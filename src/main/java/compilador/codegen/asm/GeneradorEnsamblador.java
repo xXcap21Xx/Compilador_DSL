@@ -23,6 +23,8 @@ public class GeneradorEnsamblador {
     private final Set<String> variablesUsadas;
     private final Set<String> variablesDeclaradas;
     private final Map<String, String> textosDeclarados;
+    private final Map<String, String> estructurasTipo;
+    private final Map<String, Integer> estructurasTamano;
     private final StringBuilder outputVisualizacion;
     private boolean optimizacionActiva;
     private int contadorEtiquetasInternas;
@@ -35,6 +37,8 @@ public class GeneradorEnsamblador {
         this.variablesUsadas = new LinkedHashSet<>();
         this.variablesDeclaradas = new LinkedHashSet<>();
         this.textosDeclarados = new LinkedHashMap<>();
+        this.estructurasTipo = new LinkedHashMap<>();
+        this.estructurasTamano = new LinkedHashMap<>();
         this.outputVisualizacion = new StringBuilder();
         this.optimizacionActiva = true;
         this.contadorEtiquetasInternas = 1;
@@ -110,7 +114,7 @@ public class GeneradorEnsamblador {
                 traducirPrint(arg1);
                 break;
             case "ALLOC":
-                traducirAlloc(arg1, res);
+                traducirAlloc(arg1, arg2, res);
                 break;
             case "FREE":
                 traducirFree(res);
@@ -274,7 +278,28 @@ public class GeneradorEnsamblador {
         emitir("    call print_string");
     }
 
-    private void traducirAlloc(String tamano, String variable) {
+    private void traducirAlloc(String tamano, String tipo, String variable) {
+        if (!esIdentificador(variable)) {
+            return;
+        }
+
+        int capacidad = esNumero(tamano) ? Integer.parseInt(tamano) : 100;
+        String tipoNormalizado = tipo == null ? "" : tipo.toUpperCase();
+
+        if ("PILA".equals(tipoNormalizado) || "PILA_CIRCULAR".equals(tipoNormalizado)) {
+            estructurasTipo.put(variable, "PILA");
+            estructurasTamano.put(variable, capacidad);
+            emitir("    ; CREAR PILA " + variable + " TAMANO " + capacidad);
+            return;
+        }
+
+        if ("COLA".equals(tipoNormalizado) || "BICOLA".equals(tipoNormalizado)) {
+            estructurasTipo.put(variable, "COLA");
+            estructurasTamano.put(variable, capacidad);
+            emitir("    ; CREAR COLA " + variable + " TAMANO " + capacidad);
+            return;
+        }
+
         registrarVariable(variable);
         emitir("    ; ALLOC " + variable + " TAMANO " + tamano);
         emitir("    mov word ptr [" + variable + "], 0");
@@ -287,39 +312,146 @@ public class GeneradorEnsamblador {
     }
 
     private void traducirOperacionInsercion(String op, String arg1, String arg2, String estructura) {
+        String tipo = estructurasTipo.get(estructura);
+        String valor = arg2.isEmpty() ? arg1 : arg2;
+
+        if ("PILA".equals(tipo) && ("APILAR".equals(op) || "PUSH".equals(op))) {
+            emitir("    ; " + op + " " + valor + " EN " + estructura);
+            cargarAX(valor);
+            emitir("    mov bx, [" + estructura + "_top]");
+            emitir("    shl bx, 1");
+            emitir("    mov " + estructura + "[bx], ax");
+            emitir("    inc word ptr [" + estructura + "_top]");
+            return;
+        }
+
+        if ("COLA".equals(tipo) && ("ENCOLAR".equals(op) || "ENQUEUE".equals(op))) {
+            int capacidad = estructurasTamano.getOrDefault(estructura, 100);
+            String lNoWrap = nuevaEtiquetaInterna();
+
+            emitir("    ; " + op + " " + valor + " EN " + estructura);
+            cargarAX(valor);
+            emitir("    mov bx, [" + estructura + "_rear]");
+            emitir("    shl bx, 1");
+            emitir("    mov " + estructura + "[bx], ax");
+            emitir("    inc word ptr [" + estructura + "_rear]");
+            emitir("    inc word ptr [" + estructura + "_count]");
+            emitir("    cmp word ptr [" + estructura + "_rear], " + capacidad);
+            emitir("    jl " + lNoWrap);
+            emitir("    mov word ptr [" + estructura + "_rear], 0");
+            emitir(lNoWrap + ":");
+            return;
+        }
+
         registrarVariable(estructura);
         emitir("    ; " + op + " " + arg1 + (arg2.isEmpty() ? "" : " " + arg2) + " EN " + estructura);
-        String valor = arg2.isEmpty() ? arg1 : arg2;
         cargarAX(valor);
         emitir("    mov [" + estructura + "], ax");
     }
 
     private void traducirOperacionSimple(String op, String estructura) {
+        String tipo = estructurasTipo.get(estructura);
+
+        if ("PILA".equals(tipo) && ("DESAPILAR".equals(op) || "POP".equals(op))) {
+            String lFin = nuevaEtiquetaInterna();
+
+            emitir("    ; " + op + " EN " + estructura);
+            emitir("    cmp word ptr [" + estructura + "_top], 0");
+            emitir("    je " + lFin);
+            emitir("    dec word ptr [" + estructura + "_top]");
+            emitir("    mov bx, [" + estructura + "_top]");
+            emitir("    shl bx, 1");
+            emitir("    mov word ptr " + estructura + "[bx], 0");
+            emitir(lFin + ":");
+            return;
+        }
+
+        if ("COLA".equals(tipo) && ("DESENCOLAR".equals(op) || "DEQUEUE".equals(op))) {
+            int capacidad = estructurasTamano.getOrDefault(estructura, 100);
+            String lNoWrap = nuevaEtiquetaInterna();
+            String lFin = nuevaEtiquetaInterna();
+
+            emitir("    ; " + op + " EN " + estructura);
+            emitir("    cmp word ptr [" + estructura + "_count], 0");
+            emitir("    je " + lFin);
+            emitir("    mov bx, [" + estructura + "_front]");
+            emitir("    shl bx, 1");
+            emitir("    mov word ptr " + estructura + "[bx], 0");
+            emitir("    inc word ptr [" + estructura + "_front]");
+            emitir("    dec word ptr [" + estructura + "_count]");
+            emitir("    cmp word ptr [" + estructura + "_front], " + capacidad);
+            emitir("    jl " + lNoWrap);
+            emitir("    mov word ptr [" + estructura + "_front], 0");
+            emitir(lNoWrap + ":");
+            emitir(lFin + ":");
+            return;
+        }
+
         registrarVariable(estructura);
         emitir("    ; " + op + " EN " + estructura);
         emitir("    mov word ptr [" + estructura + "], 0");
     }
 
     private void traducirBooleanoEstructura(String op, String estructura, String resultado) {
-        registrarVariable(estructura);
+        String tipo = estructurasTipo.get(estructura);
         registrarVariable(resultado);
-        emitir("    ; " + op + " EN " + estructura);
-        emitir("    mov ax, [" + estructura + "]");
-        emitir("    cmp ax, 0");
-        if ("VACIA".equals(op)) {
-            String lFin = nuevaEtiquetaInterna();
-            emitir("    mov word ptr [" + resultado + "], 0");
-            emitir("    jne " + lFin);
-            emitir("    mov word ptr [" + resultado + "], 1");
-            emitir(lFin + ":");
-        } else {
-            emitir("    mov word ptr [" + resultado + "], 0");
+
+        if ("PILA".equals(tipo)) {
+            traducirBooleanoPorContador(op, estructura + "_top", resultado, estructurasTamano.getOrDefault(estructura, 100));
+            return;
         }
+
+        if ("COLA".equals(tipo)) {
+            traducirBooleanoPorContador(op, estructura + "_count", resultado, estructurasTamano.getOrDefault(estructura, 100));
+            return;
+        }
+
+        registrarVariable(estructura);
+        traducirBooleanoPorContador(op, estructura, resultado, 1);
     }
 
     private void traducirPropiedadEstructura(String op, String estructura, String resultado) {
-        registrarVariable(estructura);
+        String tipo = estructurasTipo.get(estructura);
         registrarVariable(resultado);
+
+        if ("PILA".equals(tipo) && ("TOPE".equals(op) || "PEEK".equals(op))) {
+            String lVacia = nuevaEtiquetaInterna();
+            String lFin = nuevaEtiquetaInterna();
+
+            emitir("    ; " + op + " EN " + estructura);
+            emitir("    cmp word ptr [" + estructura + "_top], 0");
+            emitir("    je " + lVacia);
+            emitir("    mov bx, [" + estructura + "_top]");
+            emitir("    dec bx");
+            emitir("    shl bx, 1");
+            emitir("    mov ax, " + estructura + "[bx]");
+            emitir("    mov [" + resultado + "], ax");
+            emitir("    jmp " + lFin);
+            emitir(lVacia + ":");
+            emitir("    mov word ptr [" + resultado + "], 0");
+            emitir(lFin + ":");
+            return;
+        }
+
+        if ("COLA".equals(tipo) && ("FRENTE".equals(op) || "FRONT".equals(op))) {
+            String lVacia = nuevaEtiquetaInterna();
+            String lFin = nuevaEtiquetaInterna();
+
+            emitir("    ; " + op + " EN " + estructura);
+            emitir("    cmp word ptr [" + estructura + "_count], 0");
+            emitir("    je " + lVacia);
+            emitir("    mov bx, [" + estructura + "_front]");
+            emitir("    shl bx, 1");
+            emitir("    mov ax, " + estructura + "[bx]");
+            emitir("    mov [" + resultado + "], ax");
+            emitir("    jmp " + lFin);
+            emitir(lVacia + ":");
+            emitir("    mov word ptr [" + resultado + "], 0");
+            emitir(lFin + ":");
+            return;
+        }
+
+        registrarVariable(estructura);
         emitir("    ; " + op + " EN " + estructura);
         if ("VECINOS".equals(op) || "BFS".equals(op) || "DFS".equals(op) || "CAMINOCORTO".equals(op)) {
             registrarVariable(resultado);
@@ -329,6 +461,27 @@ public class GeneradorEnsamblador {
         }
         emitir("    mov ax, [" + estructura + "]");
         emitir("    mov [" + resultado + "], ax");
+    }
+
+    private void traducirBooleanoPorContador(String op, String contador, String resultado, int capacidad) {
+        String lTrue = nuevaEtiquetaInterna();
+        String lFin = nuevaEtiquetaInterna();
+
+        emitir("    ; " + op);
+        emitir("    mov word ptr [" + resultado + "], 0");
+
+        if ("VACIA".equals(op)) {
+            emitir("    cmp word ptr [" + contador + "], 0");
+            emitir("    je " + lTrue);
+        } else {
+            emitir("    cmp word ptr [" + contador + "], " + capacidad);
+            emitir("    jge " + lTrue);
+        }
+
+        emitir("    jmp " + lFin);
+        emitir(lTrue + ":");
+        emitir("    mov word ptr [" + resultado + "], 1");
+        emitir(lFin + ":");
     }
 
     private void traducirError(String msg1, String msg2) {
@@ -589,8 +742,24 @@ public class GeneradorEnsamblador {
                             .append(entry.getValue())
                             .append("', '$'\n");
                 }
+                for (Map.Entry<String, String> entry : estructurasTipo.entrySet()) {
+                    String nombre = entry.getKey();
+                    String tipo = entry.getValue();
+                    int tamano = estructurasTamano.getOrDefault(nombre, 100);
+
+                    sb.append("    ").append(nombre).append(" dw ").append(tamano).append(" dup(0)\n");
+
+                    if ("PILA".equals(tipo)) {
+                        sb.append("    ").append(nombre).append("_top dw 0\n");
+                    } else if ("COLA".equals(tipo)) {
+                        sb.append("    ").append(nombre).append("_front dw 0\n");
+                        sb.append("    ").append(nombre).append("_rear dw 0\n");
+                        sb.append("    ").append(nombre).append("_count dw 0\n");
+                    }
+                }
+
                 for (String variable : variablesDeclaradas) {
-                    if (!textosDeclarados.containsKey(variable)) {
+                    if (!textosDeclarados.containsKey(variable) && !estructurasTipo.containsKey(variable)) {
                         sb.append("    ").append(variable).append(" dw 0\n");
                     }
                 }

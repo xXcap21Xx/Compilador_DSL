@@ -1,34 +1,62 @@
 package compilador.ui;
-
 // importamos las librerias graficas de swing y awt ya que nescesitaremos ventanas, tablas y eventos
 // tambien importamos io para el manejo de archivos y util para las listas y regex
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.text.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import java.awt.*;
-import java.awt.event.KeyEvent;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Insets;
 import java.awt.event.InputEvent;
-import java.io.*;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.awt.event.KeyEvent;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import compilador.symbol.TablaSimbolos;
-import compilador.symbol.TablaErrores;
-import compilador.core.NodoAST;
-import compilador.lexical.MotorLexico;
-import compilador.syntax.MotorSintactico;
-import compilador.semantic.MotorSemantico;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextPane;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.UIManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyleContext;
+import javax.swing.text.StyledDocument;
+
 import compilador.codegen.GeneradorCGI;
-import compilador.core.Cuadruplo;
-import compilador.utils.VentanaReferencia;
 import compilador.codegen.OptimizadorCGI;
 import compilador.codegen.asm.IntegradorSalidaASM;
+import compilador.core.Cuadruplo;
+import compilador.core.NodoAST;
+import compilador.lexical.MotorLexico;
+import compilador.semantic.MotorSemantico;
+import compilador.symbol.TablaErrores;
+import compilador.symbol.TablaSimbolos;
+import compilador.syntax.MotorSintactico;
+import compilador.utils.VentanaReferencia;
 
 public class Compilador extends JFrame {
 
@@ -870,7 +898,6 @@ public class Compilador extends JFrame {
             {"DSL(304)", "Semántico", "Comando no compatible con el tipo de estructura de datos utilizada."}
         };
     }
-
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

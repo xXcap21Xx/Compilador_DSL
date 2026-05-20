@@ -129,12 +129,15 @@ public class GeneradorCGI {
                 // Es una estructura de datos con TAMANO
                 if (tipoValNodo.equals("TAMANO")) {
                     String tamano = nodoVal.getValor();
-                    agregar("ALLOC", tamano, "", idVar);
+                    agregar("ALLOC", tamano, tipoVar, idVar);
                 } else {
                     // Es una inicialización de variable primitiva
                     String dirVal = recorrerNodo(nodoVal);
                     agregar("=", dirVal, "", idVar);
                 }
+            } else if (tipoVar.equals("PILA") || tipoVar.equals("PILA_CIRCULAR")
+                    || tipoVar.equals("COLA") || tipoVar.equals("BICOLA")) {
+                agregar("ALLOC", "100", tipoVar, idVar);
             }
             return "";
         }
