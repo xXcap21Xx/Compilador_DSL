@@ -24,9 +24,11 @@ public class GeneradorEnsamblador {
     private final Map<String, String> textosDeclarados;
     private final Map<String, String> estructurasTipo;
     private final Map<String, Integer> estructurasTamano;
+    private final List<String> rutinasArbolRecursivas;
     private final StringBuilder outputVisualizacion;
     private boolean optimizacionActiva;
     private boolean heapNecesario;
+    private boolean colaRecorridoArbolNecesaria;
     private int contadorEtiquetasInternas;
     private int contadorTextos;
 
@@ -39,9 +41,11 @@ public class GeneradorEnsamblador {
         this.textosDeclarados = new LinkedHashMap<>();
         this.estructurasTipo = new LinkedHashMap<>();
         this.estructurasTamano = new LinkedHashMap<>();
+        this.rutinasArbolRecursivas = new ArrayList<>();
         this.outputVisualizacion = new StringBuilder();
         this.optimizacionActiva = true;
         this.heapNecesario = false;
+        this.colaRecorridoArbolNecesaria = false;
         this.contadorEtiquetasInternas = 1;
         this.contadorTextos = 1;
         agregarEncabezado();
@@ -159,6 +163,12 @@ public class GeneradorEnsamblador {
             case "NODOS":
             case "BUSCAR":
             case "VECINOS":
+                if (!arg2.isEmpty()) {
+                    traducirConsultarGrafo(op, arg1, arg2, res);
+                    break;
+                }
+                traducirPropiedadEstructura(op, arg1, res);
+                break;
             case "PREORDEN":
             case "INORDEN":
             case "POSTORDEN":
@@ -430,7 +440,8 @@ public class GeneradorEnsamblador {
             return;
         }
 
-        if ("COLA".equals(tipo) && ("DESENCOLAR".equals(op) || "DEQUEUE".equals(op))) {
+        if ("COLA".equals(tipo) && ("DESENCOLAR".equals(op) || "DEQUEUE".equals(op)
+                || "ELIMINAR_FRENTE".equals(op))) {
             int capacidad = estructurasTamano.getOrDefault(estructura, 100);
             String lNoWrap = nuevaEtiquetaInterna();
             String lFin = nuevaEtiquetaInterna();
@@ -747,10 +758,21 @@ public class GeneradorEnsamblador {
     }
 
     private void traducirRecorrerArbol(String op, String arbol, String resultado) {
+        registrarVariable(resultado);
+
+        if ("PREORDEN".equals(op) || "INORDEN".equals(op) || "POSTORDEN".equals(op)) {
+            traducirRecorridoArbolImpreso(op, arbol, resultado);
+            return;
+        }
+
+        if ("RECORRIDOPORNIVELES".equals(op)) {
+            traducirRecorridoPorNivelesArbol(arbol, resultado);
+            return;
+        }
+
         String lLoop = nuevaEtiquetaInterna();
         String lFin = nuevaEtiquetaInterna();
 
-        registrarVariable(resultado);
         emitir("    ; " + op + " EN " + arbol + " recorriendo enlaces HEAP");
         emitir("    mov bx, [" + arbol + "_root]");
         emitir("    xor cx, cx");
@@ -761,7 +783,7 @@ public class GeneradorEnsamblador {
         emitir("    inc cx");
         emitir("    mov ax, HEAP[bx]");
         emitir("    mov [" + resultado + "], ax");
-        if ("INORDEN".equals(op) || "ALTURA".equals(op) || "HOJAS".equals(op)) {
+        if ("ALTURA".equals(op) || "HOJAS".equals(op)) {
             emitir("    mov bx, HEAP[bx+2]");
         } else {
             emitir("    mov bx, HEAP[bx+4]");
@@ -771,6 +793,124 @@ public class GeneradorEnsamblador {
         if ("NODOS".equals(op)) {
             emitir("    mov [" + resultado + "], cx");
         }
+    }
+
+    private void traducirRecorridoArbolImpreso(String op, String arbol, String resultado) {
+        String lRutina = nuevaEtiquetaInterna();
+        String lRet = nuevaEtiquetaInterna();
+        String lSiguiente = nuevaEtiquetaInterna();
+
+        emitir("    ; " + op + " EN " + arbol + " usando recursion con pila 8086");
+        emitir("    mov word ptr [" + resultado + "], 0");
+        emitir("    mov bx, [" + arbol + "_root]");
+        emitir("    call " + lRutina);
+        emitir("    mov ax, [" + resultado + "]");
+        emitir("    call print_num");
+        emitir("    mov dx, offset newline");
+        emitir("    call print_string");
+        emitir("    jmp " + lSiguiente);
+        emitir(lSiguiente + ":");
+
+        List<String> rutina = new ArrayList<>();
+        rutina.add(lRutina + ":");
+        rutina.add("    cmp bx, 0");
+        rutina.add("    je " + lRet);
+
+        if ("PREORDEN".equals(op)) {
+            emitirImprimirNodoArbol(rutina, resultado);
+        }
+
+        rutina.add("    push bx");
+        rutina.add("    mov bx, HEAP[bx+2]");
+        rutina.add("    call " + lRutina);
+        rutina.add("    pop bx");
+
+        if ("INORDEN".equals(op)) {
+            emitirImprimirNodoArbol(rutina, resultado);
+        }
+
+        rutina.add("    push bx");
+        rutina.add("    mov bx, HEAP[bx+4]");
+        rutina.add("    call " + lRutina);
+        rutina.add("    pop bx");
+
+        if ("POSTORDEN".equals(op)) {
+            emitirImprimirNodoArbol(rutina, resultado);
+        }
+
+        rutina.add(lRet + ":");
+        rutina.add("    ret");
+        rutinasArbolRecursivas.addAll(rutina);
+    }
+
+    private void emitirImprimirNodoArbol(String resultado) {
+        emitirImprimirNodoArbol(codigoEnsamblador, resultado);
+    }
+
+    private void emitirImprimirNodoArbol(List<String> destino, String resultado) {
+        destino.add("    mov ax, HEAP[bx]");
+        destino.add("    mov [" + resultado + "], ax");
+        destino.add("    push bx");
+        destino.add("    call print_num");
+        destino.add("    mov dx, offset newline");
+        destino.add("    call print_string");
+        destino.add("    pop bx");
+    }
+
+    private void traducirRecorridoPorNivelesArbol(String arbol, String resultado) {
+        String lFin = nuevaEtiquetaInterna();
+        String lLoop = nuevaEtiquetaInterna();
+        String lNodoVacio = nuevaEtiquetaInterna();
+        String lSinIzq = nuevaEtiquetaInterna();
+        String lSinDer = nuevaEtiquetaInterna();
+
+        colaRecorridoArbolNecesaria = true;
+        registrarVariable(resultado);
+        emitir("    ; RECORRIDOPORNIVELES EN " + arbol + " usando cola estatica segura");
+        emitir("    mov word ptr [" + resultado + "], 0");
+        emitir("    mov word ptr [ARBOL_Q_FRONT], 0");
+        emitir("    mov word ptr [ARBOL_Q_REAR], 0");
+        emitir("    mov ax, [" + arbol + "_root]");
+        emitir("    cmp ax, 0");
+        emitir("    je " + lFin);
+        emitir("    mov bx, [ARBOL_Q_REAR]");
+        emitir("    shl bx, 1");
+        emitir("    mov ARBOL_QUEUE[bx], ax");
+        emitir("    inc word ptr [ARBOL_Q_REAR]");
+        emitir(lLoop + ":");
+        emitir("    mov ax, [ARBOL_Q_FRONT]");
+        emitir("    cmp ax, [ARBOL_Q_REAR]");
+        emitir("    jge " + lFin);
+        emitir("    mov bx, ax");
+        emitir("    shl bx, 1");
+        emitir("    mov bx, ARBOL_QUEUE[bx]");
+        emitir("    inc word ptr [ARBOL_Q_FRONT]");
+        emitir("    cmp bx, 0");
+        emitir("    je " + lNodoVacio);
+        emitirImprimirNodoArbol(resultado);
+        emitir("    mov ax, HEAP[bx+2]");
+        emitir("    cmp ax, 0");
+        emitir("    je " + lSinIzq);
+        emitir("    mov si, [ARBOL_Q_REAR]");
+        emitir("    cmp si, 128");
+        emitir("    jge " + lSinIzq);
+        emitir("    shl si, 1");
+        emitir("    mov ARBOL_QUEUE[si], ax");
+        emitir("    inc word ptr [ARBOL_Q_REAR]");
+        emitir(lSinIzq + ":");
+        emitir("    mov ax, HEAP[bx+4]");
+        emitir("    cmp ax, 0");
+        emitir("    je " + lSinDer);
+        emitir("    mov si, [ARBOL_Q_REAR]");
+        emitir("    cmp si, 128");
+        emitir("    jge " + lSinDer);
+        emitir("    shl si, 1");
+        emitir("    mov ARBOL_QUEUE[si], ax");
+        emitir("    inc word ptr [ARBOL_Q_REAR]");
+        emitir(lSinDer + ":");
+        emitir(lNodoVacio + ":");
+        emitir("    jmp " + lLoop);
+        emitir(lFin + ":");
     }
 
     private void traducirConsultarGrafo(String op, String grafo, String resultado) {
@@ -795,6 +935,43 @@ public class GeneradorEnsamblador {
         emitir("    mov ax, " + grafo + "_edges_to[bx]");
         emitir("    mov [" + resultado + "], ax");
         emitir(lNext + ":");
+        emitir("    inc si");
+        emitir("    jmp " + lLoop);
+        emitir(lFin + ":");
+    }
+
+    private void traducirConsultarGrafo(String op, String nodoBuscado, String grafo, String resultado) {
+        String tipo = estructurasTipo.get(grafo);
+        if (!"GRAFO".equals(tipo)) {
+            traducirPropiedadEstructura(op, grafo, resultado);
+            return;
+        }
+
+        String lLoop = nuevaEtiquetaInterna();
+        String lNoMatch = nuevaEtiquetaInterna();
+        String lFin = nuevaEtiquetaInterna();
+
+        registrarVariable(resultado);
+        emitir("    ; " + op + " " + nodoBuscado + " EN " + grafo + " recorriendo aristas");
+        emitir("    mov word ptr [" + resultado + "], 0");
+        cargarAX(nodoBuscado);
+        emitir("    mov dx, ax");
+        emitir("    xor si, si");
+        emitir(lLoop + ":");
+        emitir("    cmp si, [" + grafo + "_edge_count]");
+        emitir("    jge " + lFin);
+        emitir("    mov bx, si");
+        emitir("    shl bx, 1");
+        emitir("    cmp " + grafo + "_edges_from[bx], dx");
+        emitir("    jne " + lNoMatch);
+        emitir("    mov ax, " + grafo + "_edges_to[bx]");
+        emitir("    mov [" + resultado + "], ax");
+        emitir("    push dx");
+        emitir("    call print_num");
+        emitir("    mov dx, offset newline");
+        emitir("    call print_string");
+        emitir("    pop dx");
+        emitir(lNoMatch + ":");
         emitir("    inc si");
         emitir("    jmp " + lLoop);
         emitir(lFin + ":");
@@ -1025,6 +1202,19 @@ public class GeneradorEnsamblador {
         emitir("; ============================================");
         emitir("; FIN DEL PROGRAMA");
         emitir("; ============================================");
+        if (!rutinasArbolRecursivas.isEmpty()) {
+            String lSalidaPrograma = nuevaEtiquetaInterna();
+            emitir("    jmp " + lSalidaPrograma);
+            emitir("");
+            emitir("; ============================================");
+            emitir("; RUTINAS RECURSIVAS DE ARBOL");
+            emitir("; ============================================");
+            for (String linea : rutinasArbolRecursivas) {
+                emitir(linea);
+            }
+            emitir("");
+            emitir(lSalidaPrograma + ":");
+        }
         emitir("    mov ax, 4C00h");
         emitir("    int 21h");
         emitir("");
@@ -1093,6 +1283,11 @@ public class GeneradorEnsamblador {
                 if (heapNecesario) {
                     sb.append("    HEAP dw 1000 dup(0)\n");
                     sb.append("    HEAP_PTR dw 2\n");
+                }
+                if (colaRecorridoArbolNecesaria) {
+                    sb.append("    ARBOL_QUEUE dw 128 dup(0)\n");
+                    sb.append("    ARBOL_Q_FRONT dw 0\n");
+                    sb.append("    ARBOL_Q_REAR dw 0\n");
                 }
                 for (Map.Entry<String, String> entry : estructurasTipo.entrySet()) {
                     String nombre = entry.getKey();
