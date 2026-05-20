@@ -328,18 +328,27 @@ public class GeneradorEnsamblador {
         if ("COLA".equals(tipo) && ("ENCOLAR".equals(op) || "ENQUEUE".equals(op))) {
             int capacidad = estructurasTamano.getOrDefault(estructura, 100);
             String lNoWrap = nuevaEtiquetaInterna();
+            String lFin = nuevaEtiquetaInterna();
 
             emitir("    ; " + op + " " + valor + " EN " + estructura);
+
+            // Si la cola esta llena, no inserta.
+            emitir("    cmp word ptr [" + estructura + "_count], " + capacidad);
+            emitir("    jge " + lFin);
+
             cargarAX(valor);
             emitir("    mov bx, [" + estructura + "_rear]");
             emitir("    shl bx, 1");
             emitir("    mov " + estructura + "[bx], ax");
+
             emitir("    inc word ptr [" + estructura + "_rear]");
-            emitir("    inc word ptr [" + estructura + "_count]");
             emitir("    cmp word ptr [" + estructura + "_rear], " + capacidad);
             emitir("    jl " + lNoWrap);
             emitir("    mov word ptr [" + estructura + "_rear], 0");
             emitir(lNoWrap + ":");
+
+            emitir("    inc word ptr [" + estructura + "_count]");
+            emitir(lFin + ":");
             return;
         }
 
@@ -372,17 +381,22 @@ public class GeneradorEnsamblador {
             String lFin = nuevaEtiquetaInterna();
 
             emitir("    ; " + op + " EN " + estructura);
+
+            // Si la cola esta vacia, no elimina.
             emitir("    cmp word ptr [" + estructura + "_count], 0");
             emitir("    je " + lFin);
+
             emitir("    mov bx, [" + estructura + "_front]");
             emitir("    shl bx, 1");
             emitir("    mov word ptr " + estructura + "[bx], 0");
+
             emitir("    inc word ptr [" + estructura + "_front]");
-            emitir("    dec word ptr [" + estructura + "_count]");
             emitir("    cmp word ptr [" + estructura + "_front], " + capacidad);
             emitir("    jl " + lNoWrap);
             emitir("    mov word ptr [" + estructura + "_front], 0");
             emitir(lNoWrap + ":");
+
+            emitir("    dec word ptr [" + estructura + "_count]");
             emitir(lFin + ":");
             return;
         }
@@ -438,15 +452,19 @@ public class GeneradorEnsamblador {
             String lFin = nuevaEtiquetaInterna();
 
             emitir("    ; " + op + " EN " + estructura);
+
             emitir("    cmp word ptr [" + estructura + "_count], 0");
             emitir("    je " + lVacia);
+
             emitir("    mov bx, [" + estructura + "_front]");
             emitir("    shl bx, 1");
             emitir("    mov ax, " + estructura + "[bx]");
             emitir("    mov [" + resultado + "], ax");
             emitir("    jmp " + lFin);
+
             emitir(lVacia + ":");
             emitir("    mov word ptr [" + resultado + "], 0");
+
             emitir(lFin + ":");
             return;
         }

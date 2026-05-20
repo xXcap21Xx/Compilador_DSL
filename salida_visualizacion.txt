@@ -5,25 +5,87 @@
 
 CUÁDRUPLOS GENERADOS:
 ──────────────────────────────────────────────────────────────────────
-  0: ALLOC           10                   PILA                 -> miPila
-  1: =               5                                         -> miContador
-  2: APILAR          20                                        -> miPila
-  3: APILAR          80                                        -> miPila
-  4: VACIA           miPila                                    -> T1
-  5: IF_FALSE        T1                   GOTO                 -> L1
-  6: ERROR           Estructura vacía                          -> 
-  7: ETIQUETA                                                  -> L1
-  8: DESAPILAR                                                 -> miPila
-  9: +               miContador           10                   -> T2
- 10: =               T2                                        -> miContador
- 11: PRINT           miContador                                -> 
- 12: =               0                                         -> revisarTope
- 13: TOPE            miPila                                    -> T3
- 14: =               T3                                        -> revisarTope
- 15: >               revisarTope          15                   -> T4
- 16: IF_FALSE        T4                   GOTO                 -> L2
- 17: PRINT           revisarTope                               -> 
- 18: ETIQUETA                                                  -> L2
+  0: ALLOC           100                  PILA                 -> miPila
+  1: ALLOC           50                   COLA                 -> miCola
+  2: APILAR          1                                         -> miPila
+  3: APILAR          2                                         -> miPila
+  4: APILAR          3                                         -> miPila
+  5: TOPE            miPila                                    -> T1
+  6: PRINT           T1                                        -> 
+  7: VACIA           miPila                                    -> T2
+  8: IF_FALSE        T2                   GOTO                 -> L1
+  9: ERROR           Estructura vacía                          -> 
+ 10: ETIQUETA                                                  -> L1
+ 11: DESAPILAR                                                 -> miPila
+ 12: TOPE            miPila                                    -> T3
+ 13: PRINT           T3                                        -> 
+ 14: INSERTAR_FINAL  5                                         -> miLista
+ 15: INSERTAR_FINAL  10                                        -> miLista
+ 16: INSERTAR_FINAL  15                                        -> miLista
+ 17: AGREGARNODO     1                    25                   -> miArbol
+ 18: AGREGARNODO     1                    15                   -> miArbol
+ 19: AGREGARNODO     1                    35                   -> miArbol
+ 20: AGREGARNODO     1                    10                   -> miArbol
+ 21: AGREGARNODO     1                    20                   -> miArbol
+ 22: AGREGARNODO     1                    30                   -> miArbol
+ 23: AGREGARNODO     1                    40                   -> miArbol
+ 24: PREORDEN        miArbol                                   -> T4
+ 25: PRINT           T4                                        -> 
+ 26: INORDEN         miArbol                                   -> T5
+ 27: PRINT           T5                                        -> 
+ 28: POSTORDEN       miArbol                                   -> T6
+ 29: PRINT           T6                                        -> 
+ 30: RECORRIDOPORNIVELES miArbol                                   -> T7
+ 31: PRINT           T7                                        -> 
+ 32: AGREGARNODO     1                    100                  -> miGrafo
+ 33: AGREGARNODO     2                    200                  -> miGrafo
+ 34: AGREGARNODO     3                    300                  -> miGrafo
+ 35: AGREGARNODO     4                    400                  -> miGrafo
+ 36: AGREGARNODO     5                    500                  -> miGrafo
+ 37: AGREGARARISTA   1                    2                    -> miGrafo
+ 38: AGREGARARISTA   2                    3                    -> miGrafo
+ 39: AGREGARARISTA   3                    4                    -> miGrafo
+ 40: AGREGARARISTA   4                    5                    -> miGrafo
+ 41: AGREGARARISTA   1                    5                    -> miGrafo
+ 42: VECINOS         1                    miGrafo              -> T8
+ 43: PRINT           T8                                        -> 
+ 44: INSERTAR        101                  1000                 -> miHash
+ 45: INSERTAR        102                  2000                 -> miHash
+ 46: INSERTAR        103                  3000                 -> miHash
+ 47: =               0                                         -> resultado
+ 48: +               5                    6                    -> T10
+ 49: =               T10                                       -> resultado
+ 50: *               8                    2                    -> T12
+ 51: =               T12                                       -> resultado
+ 52: +               5                    3                    -> T14
+ 53: =               T14                                       -> resultado
+ 54: *               10                   2                    -> T16
+ 55: =               T16                                       -> resultado
+ 56: PRINT           resultado                                 -> 
+ 57: =               0                                         -> temp
+ 58: TOPE            miPila                                    -> T17
+ 59: =               T17                                       -> temp
+ 60: +               temp                 1                    -> T18
+ 61: =               T18                                       -> temp
+ 62: PRINT           temp                                      -> 
+ 63: VACIA           miPila                                    -> T19
+ 64: IF_FALSE        T19                  GOTO                 -> L2
+ 65: PRINT           0                                         -> 
+ 66: ETIQUETA                                                  -> L2
+ 67: VACIA           miCola                                    -> T20
+ 68: IF_FALSE        T20                  GOTO                 -> L4
+ 69: PRINT           0                                         -> 
+ 70: ETIQUETA                                                  -> L4
+ 71: ELIMINAR_FINAL                                            -> miLista
+ 72: ELIMINAR_INICIO                                           -> miLista
+ 73: INSERTAR        200                  999                  -> miHash
+ 74: =               0                                         -> valorTope
+ 75: TOPE            miPila                                    -> T21
+ 76: =               T21                                       -> valorTope
+ 77: >               valorTope            5                    -> T22
+ 78: IF_FALSE        T22                  GOTO                 -> L6
+ 79: PRINT           valorTope                                 -> 
+ 80: ETIQUETA                                                  -> L6
 
 ══════════════════════════════════════════════════════════════════════
 
