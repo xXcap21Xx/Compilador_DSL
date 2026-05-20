@@ -1,13 +1,12 @@
 package compilador.codegen.asm;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import compilador.core.Cuadruplo;
 
+import compilador.core.Cuadruplo;
 /**
  * Generador de codigo ensamblador 8086/MASM a partir de cuadruplos.
  *
@@ -27,6 +26,7 @@ public class GeneradorEnsamblador {
     private final Map<String, Integer> estructurasTamano;
     private final StringBuilder outputVisualizacion;
     private boolean optimizacionActiva;
+    private boolean heapNecesario;
     private int contadorEtiquetasInternas;
     private int contadorTextos;
 
@@ -41,11 +41,11 @@ public class GeneradorEnsamblador {
         this.estructurasTamano = new LinkedHashMap<>();
         this.outputVisualizacion = new StringBuilder();
         this.optimizacionActiva = true;
+        this.heapNecesario = false;
         this.contadorEtiquetasInternas = 1;
         this.contadorTextos = 1;
         agregarEncabezado();
     }
-
     public static class NodoArbol {
         public Object clave;
         public Object valor;
@@ -57,7 +57,6 @@ public class GeneradorEnsamblador {
             this.valor = valor;
         }
     }
-
     private void agregarEncabezado() {
         emitir("; ============================================");
         emitir("; CODIGO ENSAMBLADOR GENERADO - DSL");
@@ -300,6 +299,37 @@ public class GeneradorEnsamblador {
             return;
         }
 
+        if ("LISTA_ENLAZADA".equals(tipoNormalizado) || "LISTA_CIRCULAR".equals(tipoNormalizado)
+                || "LISTA_DOBLE_ENLAZADA".equals(tipoNormalizado)) {
+            estructurasTipo.put(variable, "LISTA");
+            estructurasTamano.put(variable, capacidad);
+            heapNecesario = true;
+            emitir("    ; CREAR LISTA " + variable);
+            return;
+        }
+
+        if ("ARBOL_BINARIO".equals(tipoNormalizado)) {
+            estructurasTipo.put(variable, "ARBOL");
+            estructurasTamano.put(variable, capacidad);
+            heapNecesario = true;
+            emitir("    ; CREAR ARBOL_BINARIO " + variable);
+            return;
+        }
+
+        if ("GRAFO".equals(tipoNormalizado)) {
+            estructurasTipo.put(variable, "GRAFO");
+            estructurasTamano.put(variable, capacidad);
+            emitir("    ; CREAR GRAFO " + variable + " CAPACIDAD " + capacidad);
+            return;
+        }
+
+        if ("TABLA_HASH".equals(tipoNormalizado)) {
+            estructurasTipo.put(variable, "HASH");
+            estructurasTamano.put(variable, capacidad);
+            emitir("    ; CREAR TABLA_HASH " + variable + " CAPACIDAD " + capacidad);
+            return;
+        }
+
         registrarVariable(variable);
         emitir("    ; ALLOC " + variable + " TAMANO " + tamano);
         emitir("    mov word ptr [" + variable + "], 0");
@@ -352,6 +382,31 @@ public class GeneradorEnsamblador {
             return;
         }
 
+        if ("LISTA".equals(tipo) && (op.startsWith("INSERTAR") || "AGREGARNODO".equals(op))) {
+            traducirInsertarLista(op, valor, estructura);
+            return;
+        }
+
+        if ("ARBOL".equals(tipo) && "AGREGARNODO".equals(op)) {
+            traducirAgregarNodoArbol(arg2.isEmpty() ? arg1 : arg2, estructura);
+            return;
+        }
+
+        if ("GRAFO".equals(tipo) && "AGREGARNODO".equals(op)) {
+            traducirAgregarNodoGrafo(arg1, estructura);
+            return;
+        }
+
+        if ("GRAFO".equals(tipo) && "AGREGARARISTA".equals(op)) {
+            traducirAgregarAristaGrafo(arg1, arg2, estructura);
+            return;
+        }
+
+        if ("HASH".equals(tipo) && ("INSERTAR".equals(op) || "ACTUALIZAR".equals(op))) {
+            traducirInsertarHash(arg1, arg2, estructura);
+            return;
+        }
+
         registrarVariable(estructura);
         emitir("    ; " + op + " " + arg1 + (arg2.isEmpty() ? "" : " " + arg2) + " EN " + estructura);
         cargarAX(valor);
@@ -401,6 +456,12 @@ public class GeneradorEnsamblador {
             return;
         }
 
+        if ("LISTA".equals(tipo) && ("ELIMINAR".equals(op) || "ELIMINAR_INICIO".equals(op)
+                || "ELIMINAR_FINAL".equals(op))) {
+            traducirEliminarLista(op, estructura);
+            return;
+        }
+
         registrarVariable(estructura);
         emitir("    ; " + op + " EN " + estructura);
         emitir("    mov word ptr [" + estructura + "], 0");
@@ -422,6 +483,164 @@ public class GeneradorEnsamblador {
 
         registrarVariable(estructura);
         traducirBooleanoPorContador(op, estructura, resultado, 1);
+    }
+
+    private void traducirInsertarLista(String op, String valor, String lista) {
+        String lAppend = nuevaEtiquetaInterna();
+        String lFin = nuevaEtiquetaInterna();
+
+        emitir("    ; " + op + " " + valor + " EN " + lista + " (nodo HEAP: valor, sig)");
+        cargarAX(valor);
+        emitir("    mov si, [HEAP_PTR]");
+        emitir("    add word ptr [HEAP_PTR], 4");
+        emitir("    mov HEAP[si], ax");
+        emitir("    mov word ptr HEAP[si+2], 0");
+        emitir("    cmp word ptr [" + lista + "_head], 0");
+        emitir("    jne " + lAppend);
+        emitir("    mov [" + lista + "_head], si");
+        emitir("    mov [" + lista + "_tail], si");
+        emitir("    jmp " + lFin);
+        emitir(lAppend + ":");
+        emitir("    mov bx, [" + lista + "_tail]");
+        emitir("    mov HEAP[bx+2], si");
+        emitir("    mov [" + lista + "_tail], si");
+        emitir(lFin + ":");
+    }
+
+    private void traducirEliminarLista(String op, String lista) {
+        if ("ELIMINAR_FINAL".equals(op)) {
+            String lUnico = nuevaEtiquetaInterna();
+            String lLoop = nuevaEtiquetaInterna();
+            String lEncontrado = nuevaEtiquetaInterna();
+            String lFin = nuevaEtiquetaInterna();
+
+            emitir("    ; " + op + " EN " + lista + " usando punteros HEAP");
+            emitir("    cmp word ptr [" + lista + "_head], 0");
+            emitir("    je " + lFin);
+            emitir("    mov bx, [" + lista + "_head]");
+            emitir("    cmp bx, [" + lista + "_tail]");
+            emitir("    je " + lUnico);
+            emitir(lLoop + ":");
+            emitir("    mov si, HEAP[bx+2]");
+            emitir("    cmp si, [" + lista + "_tail]");
+            emitir("    je " + lEncontrado);
+            emitir("    cmp si, 0");
+            emitir("    je " + lFin);
+            emitir("    mov bx, si");
+            emitir("    jmp " + lLoop);
+            emitir(lEncontrado + ":");
+            emitir("    mov word ptr HEAP[bx+2], 0");
+            emitir("    mov [" + lista + "_tail], bx");
+            emitir("    jmp " + lFin);
+            emitir(lUnico + ":");
+            emitir("    mov word ptr [" + lista + "_head], 0");
+            emitir("    mov word ptr [" + lista + "_tail], 0");
+            emitir(lFin + ":");
+            return;
+        }
+
+        String lFin = nuevaEtiquetaInterna();
+
+        emitir("    ; " + op + " EN " + lista + " usando punteros HEAP");
+        emitir("    cmp word ptr [" + lista + "_head], 0");
+        emitir("    je " + lFin);
+        emitir("    mov bx, [" + lista + "_head]");
+        emitir("    mov ax, HEAP[bx+2]");
+        emitir("    mov [" + lista + "_head], ax");
+        emitir("    cmp ax, 0");
+        emitir("    jne " + lFin);
+        emitir("    mov word ptr [" + lista + "_tail], 0");
+        emitir(lFin + ":");
+    }
+
+    private void traducirAgregarNodoArbol(String valor, String arbol) {
+        String lRootExiste = nuevaEtiquetaInterna();
+        String lLoop = nuevaEtiquetaInterna();
+        String lDerecha = nuevaEtiquetaInterna();
+        String lIrIzq = nuevaEtiquetaInterna();
+        String lIrDer = nuevaEtiquetaInterna();
+        String lFin = nuevaEtiquetaInterna();
+
+        emitir("    ; AGREGARNODO " + valor + " EN " + arbol + " (nodo HEAP: valor, izq, der)");
+        cargarAX(valor);
+        emitir("    mov si, [HEAP_PTR]");
+        emitir("    add word ptr [HEAP_PTR], 6");
+        emitir("    mov HEAP[si], ax");
+        emitir("    mov word ptr HEAP[si+2], 0");
+        emitir("    mov word ptr HEAP[si+4], 0");
+        emitir("    cmp word ptr [" + arbol + "_root], 0");
+        emitir("    jne " + lRootExiste);
+        emitir("    mov [" + arbol + "_root], si");
+        emitir("    jmp " + lFin);
+        emitir(lRootExiste + ":");
+        emitir("    mov bx, [" + arbol + "_root]");
+        emitir(lLoop + ":");
+        emitir("    cmp ax, HEAP[bx]");
+        emitir("    jg " + lDerecha);
+        emitir("    cmp word ptr HEAP[bx+2], 0");
+        emitir("    je " + lIrIzq);
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir("    jmp " + lLoop);
+        emitir(lIrIzq + ":");
+        emitir("    mov HEAP[bx+2], si");
+        emitir("    jmp " + lFin);
+        emitir(lDerecha + ":");
+        emitir("    cmp word ptr HEAP[bx+4], 0");
+        emitir("    je " + lIrDer);
+        emitir("    mov bx, HEAP[bx+4]");
+        emitir("    jmp " + lLoop);
+        emitir(lIrDer + ":");
+        emitir("    mov HEAP[bx+4], si");
+        emitir(lFin + ":");
+    }
+
+    private void traducirAgregarNodoGrafo(String nodo, String grafo) {
+        int capacidad = estructurasTamano.getOrDefault(grafo, 100);
+        String lFin = nuevaEtiquetaInterna();
+
+        emitir("    ; AGREGARNODO " + nodo + " EN " + grafo);
+        emitir("    cmp word ptr [" + grafo + "_node_count], " + capacidad);
+        emitir("    jge " + lFin);
+        cargarAX(nodo);
+        emitir("    mov bx, [" + grafo + "_node_count]");
+        emitir("    shl bx, 1");
+        emitir("    mov " + grafo + "_nodes[bx], ax");
+        emitir("    inc word ptr [" + grafo + "_node_count]");
+        emitir(lFin + ":");
+    }
+
+    private void traducirAgregarAristaGrafo(String origen, String destino, String grafo) {
+        int capacidad = estructurasTamano.getOrDefault(grafo, 100);
+        String lFin = nuevaEtiquetaInterna();
+
+        emitir("    ; AGREGARARISTA " + origen + " " + destino + " EN " + grafo);
+        emitir("    cmp word ptr [" + grafo + "_edge_count], " + capacidad);
+        emitir("    jge " + lFin);
+        emitir("    mov bx, [" + grafo + "_edge_count]");
+        emitir("    shl bx, 1");
+        cargarAX(origen);
+        emitir("    mov " + grafo + "_edges_from[bx], ax");
+        cargarAX(destino);
+        emitir("    mov " + grafo + "_edges_to[bx], ax");
+        emitir("    inc word ptr [" + grafo + "_edge_count]");
+        emitir(lFin + ":");
+    }
+
+    private void traducirInsertarHash(String clave, String valor, String hash) {
+        int capacidad = estructurasTamano.getOrDefault(hash, 100);
+        String lFin = nuevaEtiquetaInterna();
+
+        emitir("    ; INSERTAR " + clave + " " + valor + " EN " + hash);
+        emitir("    cmp word ptr [" + hash + "_count], " + capacidad);
+        emitir("    jge " + lFin);
+        emitir("    mov bx, [" + hash + "_count]");
+        emitir("    shl bx, 1");
+        cargarAX(clave);
+        emitir("    mov " + hash + "_keys[bx], ax");
+        cargarAX(valor);
+        emitir("    mov " + hash + "_values[bx], ax");
+        emitir("    inc word ptr [" + hash + "_count]");
+        emitir(lFin + ":");
     }
 
     private void traducirPropiedadEstructura(String op, String estructura, String resultado) {
@@ -469,6 +688,29 @@ public class GeneradorEnsamblador {
             return;
         }
 
+        if ("LISTA".equals(tipo) && ("RECORRER".equals(op) || "RECORRERADELANTE".equals(op)
+                || "TAMANO".equals(op) || "BUSCAR".equals(op))) {
+            traducirRecorrerLista(op, estructura, resultado);
+            return;
+        }
+
+        if ("ARBOL".equals(tipo) && ("PREORDEN".equals(op) || "INORDEN".equals(op)
+                || "POSTORDEN".equals(op) || "RECORRIDOPORNIVELES".equals(op)
+                || "ALTURA".equals(op) || "HOJAS".equals(op) || "NODOS".equals(op))) {
+            traducirRecorrerArbol(op, estructura, resultado);
+            return;
+        }
+
+        if ("GRAFO".equals(tipo) && ("VECINOS".equals(op) || "BFS".equals(op) || "DFS".equals(op))) {
+            traducirConsultarGrafo(op, estructura, resultado);
+            return;
+        }
+
+        if ("HASH".equals(tipo) && ("BUSCAR".equals(op) || "TAMANO".equals(op))) {
+            traducirConsultarHash(op, estructura, resultado);
+            return;
+        }
+
         registrarVariable(estructura);
         emitir("    ; " + op + " EN " + estructura);
         if ("VECINOS".equals(op) || "BFS".equals(op) || "DFS".equals(op) || "CAMINOCORTO".equals(op)) {
@@ -479,6 +721,94 @@ public class GeneradorEnsamblador {
         }
         emitir("    mov ax, [" + estructura + "]");
         emitir("    mov [" + resultado + "], ax");
+    }
+
+    private void traducirRecorrerLista(String op, String lista, String resultado) {
+        String lLoop = nuevaEtiquetaInterna();
+        String lFin = nuevaEtiquetaInterna();
+
+        registrarVariable(resultado);
+        emitir("    ; " + op + " EN " + lista + " recorriendo punteros HEAP");
+        emitir("    mov bx, [" + lista + "_head]");
+        emitir("    xor cx, cx");
+        emitir("    mov word ptr [" + resultado + "], 0");
+        emitir(lLoop + ":");
+        emitir("    cmp bx, 0");
+        emitir("    je " + lFin);
+        emitir("    inc cx");
+        emitir("    mov ax, HEAP[bx]");
+        emitir("    mov [" + resultado + "], ax");
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir("    jmp " + lLoop);
+        emitir(lFin + ":");
+        if ("TAMANO".equals(op)) {
+            emitir("    mov [" + resultado + "], cx");
+        }
+    }
+
+    private void traducirRecorrerArbol(String op, String arbol, String resultado) {
+        String lLoop = nuevaEtiquetaInterna();
+        String lFin = nuevaEtiquetaInterna();
+
+        registrarVariable(resultado);
+        emitir("    ; " + op + " EN " + arbol + " recorriendo enlaces HEAP");
+        emitir("    mov bx, [" + arbol + "_root]");
+        emitir("    xor cx, cx");
+        emitir("    mov word ptr [" + resultado + "], 0");
+        emitir(lLoop + ":");
+        emitir("    cmp bx, 0");
+        emitir("    je " + lFin);
+        emitir("    inc cx");
+        emitir("    mov ax, HEAP[bx]");
+        emitir("    mov [" + resultado + "], ax");
+        if ("INORDEN".equals(op) || "ALTURA".equals(op) || "HOJAS".equals(op)) {
+            emitir("    mov bx, HEAP[bx+2]");
+        } else {
+            emitir("    mov bx, HEAP[bx+4]");
+        }
+        emitir("    jmp " + lLoop);
+        emitir(lFin + ":");
+        if ("NODOS".equals(op)) {
+            emitir("    mov [" + resultado + "], cx");
+        }
+    }
+
+    private void traducirConsultarGrafo(String op, String grafo, String resultado) {
+        String lLoop = nuevaEtiquetaInterna();
+        String lMatch = nuevaEtiquetaInterna();
+        String lNext = nuevaEtiquetaInterna();
+        String lFin = nuevaEtiquetaInterna();
+
+        registrarVariable(resultado);
+        emitir("    ; " + op + " EN " + grafo + " recorriendo arreglos de aristas");
+        emitir("    mov word ptr [" + resultado + "], 0");
+        emitir("    xor si, si");
+        emitir(lLoop + ":");
+        emitir("    cmp si, [" + grafo + "_edge_count]");
+        emitir("    jge " + lFin);
+        emitir("    mov bx, si");
+        emitir("    shl bx, 1");
+        emitir("    cmp word ptr " + grafo + "_edges_from[bx], 0");
+        emitir("    jne " + lMatch);
+        emitir("    jmp " + lNext);
+        emitir(lMatch + ":");
+        emitir("    mov ax, " + grafo + "_edges_to[bx]");
+        emitir("    mov [" + resultado + "], ax");
+        emitir(lNext + ":");
+        emitir("    inc si");
+        emitir("    jmp " + lLoop);
+        emitir(lFin + ":");
+    }
+
+    private void traducirConsultarHash(String op, String hash, String resultado) {
+        registrarVariable(resultado);
+        emitir("    ; " + op + " EN " + hash);
+        if ("TAMANO".equals(op)) {
+            emitir("    mov ax, [" + hash + "_count]");
+            emitir("    mov [" + resultado + "], ax");
+        } else {
+            emitir("    mov word ptr [" + resultado + "], 0");
+        }
     }
 
     private void traducirBooleanoPorContador(String op, String contador, String resultado, int capacidad) {
@@ -760,22 +1090,40 @@ public class GeneradorEnsamblador {
                             .append(entry.getValue())
                             .append("', '$'\n");
                 }
+                if (heapNecesario) {
+                    sb.append("    HEAP dw 1000 dup(0)\n");
+                    sb.append("    HEAP_PTR dw 2\n");
+                }
                 for (Map.Entry<String, String> entry : estructurasTipo.entrySet()) {
                     String nombre = entry.getKey();
                     String tipo = entry.getValue();
                     int tamano = estructurasTamano.getOrDefault(nombre, 100);
 
-                    sb.append("    ").append(nombre).append(" dw ").append(tamano).append(" dup(0)\n");
-
                     if ("PILA".equals(tipo)) {
+                        sb.append("    ").append(nombre).append(" dw ").append(tamano).append(" dup(0)\n");
                         sb.append("    ").append(nombre).append("_top dw 0\n");
                     } else if ("COLA".equals(tipo)) {
+                        sb.append("    ").append(nombre).append(" dw ").append(tamano).append(" dup(0)\n");
                         sb.append("    ").append(nombre).append("_front dw 0\n");
                         sb.append("    ").append(nombre).append("_rear dw 0\n");
                         sb.append("    ").append(nombre).append("_count dw 0\n");
+                    } else if ("LISTA".equals(tipo)) {
+                        sb.append("    ").append(nombre).append("_head dw 0\n");
+                        sb.append("    ").append(nombre).append("_tail dw 0\n");
+                    } else if ("ARBOL".equals(tipo)) {
+                        sb.append("    ").append(nombre).append("_root dw 0\n");
+                    } else if ("GRAFO".equals(tipo)) {
+                        sb.append("    ").append(nombre).append("_nodes dw ").append(tamano).append(" dup(0)\n");
+                        sb.append("    ").append(nombre).append("_node_count dw 0\n");
+                        sb.append("    ").append(nombre).append("_edges_from dw ").append(tamano).append(" dup(0)\n");
+                        sb.append("    ").append(nombre).append("_edges_to dw ").append(tamano).append(" dup(0)\n");
+                        sb.append("    ").append(nombre).append("_edge_count dw 0\n");
+                    } else if ("HASH".equals(tipo)) {
+                        sb.append("    ").append(nombre).append("_keys dw ").append(tamano).append(" dup(0)\n");
+                        sb.append("    ").append(nombre).append("_values dw ").append(tamano).append(" dup(0)\n");
+                        sb.append("    ").append(nombre).append("_count dw 0\n");
                     }
                 }
-
                 for (String variable : variablesDeclaradas) {
                     if (!textosDeclarados.containsKey(variable) && !estructurasTipo.containsKey(variable)) {
                         sb.append("    ").append(variable).append(" dw 0\n");
@@ -787,7 +1135,6 @@ public class GeneradorEnsamblador {
         }
         return sb.toString();
     }
-
     public String obtenerVisualizacion() {
         return outputVisualizacion.toString();
     }
@@ -796,7 +1143,6 @@ public class GeneradorEnsamblador {
         System.out.println(obtenerCodigoEnsamblador());
         System.out.println(obtenerVisualizacion());
     }
-
     public void procesarCuadruplos(List<Cuadruplo> cuadruplos) {
         for (Cuadruplo c : cuadruplos) {
             traducirCuadruplo(c);
@@ -808,7 +1154,6 @@ public class GeneradorEnsamblador {
             optimizarCodigo();
         }
     }
-
     public void establecerOptimizacion(boolean activa) {
         this.optimizacionActiva = activa;
     }

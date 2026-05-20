@@ -19,73 +19,77 @@ CUÁDRUPLOS GENERADOS:
  11: DESAPILAR                                                 -> miPila
  12: TOPE            miPila                                    -> T3
  13: PRINT           T3                                        -> 
- 14: INSERTAR_FINAL  5                                         -> miLista
- 15: INSERTAR_FINAL  10                                        -> miLista
- 16: INSERTAR_FINAL  15                                        -> miLista
- 17: AGREGARNODO     1                    25                   -> miArbol
- 18: AGREGARNODO     1                    15                   -> miArbol
- 19: AGREGARNODO     1                    35                   -> miArbol
- 20: AGREGARNODO     1                    10                   -> miArbol
- 21: AGREGARNODO     1                    20                   -> miArbol
- 22: AGREGARNODO     1                    30                   -> miArbol
- 23: AGREGARNODO     1                    40                   -> miArbol
- 24: PREORDEN        miArbol                                   -> T4
- 25: PRINT           T4                                        -> 
- 26: INORDEN         miArbol                                   -> T5
- 27: PRINT           T5                                        -> 
- 28: POSTORDEN       miArbol                                   -> T6
- 29: PRINT           T6                                        -> 
- 30: RECORRIDOPORNIVELES miArbol                                   -> T7
- 31: PRINT           T7                                        -> 
- 32: AGREGARNODO     1                    100                  -> miGrafo
- 33: AGREGARNODO     2                    200                  -> miGrafo
- 34: AGREGARNODO     3                    300                  -> miGrafo
- 35: AGREGARNODO     4                    400                  -> miGrafo
- 36: AGREGARNODO     5                    500                  -> miGrafo
- 37: AGREGARARISTA   1                    2                    -> miGrafo
- 38: AGREGARARISTA   2                    3                    -> miGrafo
- 39: AGREGARARISTA   3                    4                    -> miGrafo
- 40: AGREGARARISTA   4                    5                    -> miGrafo
- 41: AGREGARARISTA   1                    5                    -> miGrafo
- 42: VECINOS         1                    miGrafo              -> T8
- 43: PRINT           T8                                        -> 
- 44: INSERTAR        101                  1000                 -> miHash
- 45: INSERTAR        102                  2000                 -> miHash
- 46: INSERTAR        103                  3000                 -> miHash
- 47: =               0                                         -> resultado
- 48: +               5                    6                    -> T10
- 49: =               T10                                       -> resultado
- 50: *               8                    2                    -> T12
- 51: =               T12                                       -> resultado
- 52: +               5                    3                    -> T14
- 53: =               T14                                       -> resultado
- 54: *               10                   2                    -> T16
- 55: =               T16                                       -> resultado
- 56: PRINT           resultado                                 -> 
- 57: =               0                                         -> temp
- 58: TOPE            miPila                                    -> T17
- 59: =               T17                                       -> temp
- 60: +               temp                 1                    -> T18
- 61: =               T18                                       -> temp
- 62: PRINT           temp                                      -> 
- 63: VACIA           miPila                                    -> T19
- 64: IF_FALSE        T19                  GOTO                 -> L2
- 65: PRINT           0                                         -> 
- 66: ETIQUETA                                                  -> L2
- 67: VACIA           miCola                                    -> T20
- 68: IF_FALSE        T20                  GOTO                 -> L4
+ 14: ALLOC           100                  LISTA_ENLAZADA       -> miLista
+ 15: INSERTAR_FINAL  5                                         -> miLista
+ 16: INSERTAR_FINAL  10                                        -> miLista
+ 17: INSERTAR_FINAL  15                                        -> miLista
+ 18: ALLOC           100                  ARBOL_BINARIO        -> miArbol
+ 19: AGREGARNODO     1                    25                   -> miArbol
+ 20: AGREGARNODO     1                    15                   -> miArbol
+ 21: AGREGARNODO     1                    35                   -> miArbol
+ 22: AGREGARNODO     1                    10                   -> miArbol
+ 23: AGREGARNODO     1                    20                   -> miArbol
+ 24: AGREGARNODO     1                    30                   -> miArbol
+ 25: AGREGARNODO     1                    40                   -> miArbol
+ 26: PREORDEN        miArbol                                   -> T4
+ 27: PRINT           T4                                        -> 
+ 28: INORDEN         miArbol                                   -> T5
+ 29: PRINT           T5                                        -> 
+ 30: POSTORDEN       miArbol                                   -> T6
+ 31: PRINT           T6                                        -> 
+ 32: RECORRIDOPORNIVELES miArbol                                   -> T7
+ 33: PRINT           T7                                        -> 
+ 34: ALLOC           100                  GRAFO                -> miGrafo
+ 35: AGREGARNODO     1                    100                  -> miGrafo
+ 36: AGREGARNODO     2                    200                  -> miGrafo
+ 37: AGREGARNODO     3                    300                  -> miGrafo
+ 38: AGREGARNODO     4                    400                  -> miGrafo
+ 39: AGREGARNODO     5                    500                  -> miGrafo
+ 40: AGREGARARISTA   1                    2                    -> miGrafo
+ 41: AGREGARARISTA   2                    3                    -> miGrafo
+ 42: AGREGARARISTA   3                    4                    -> miGrafo
+ 43: AGREGARARISTA   4                    5                    -> miGrafo
+ 44: AGREGARARISTA   1                    5                    -> miGrafo
+ 45: VECINOS         1                    miGrafo              -> T8
+ 46: PRINT           T8                                        -> 
+ 47: ALLOC           100                  TABLA_HASH           -> miHash
+ 48: INSERTAR        101                  1000                 -> miHash
+ 49: INSERTAR        102                  2000                 -> miHash
+ 50: INSERTAR        103                  3000                 -> miHash
+ 51: =               0                                         -> resultado
+ 52: +               5                    6                    -> T10
+ 53: =               T10                                       -> resultado
+ 54: *               8                    2                    -> T12
+ 55: =               T12                                       -> resultado
+ 56: +               5                    3                    -> T14
+ 57: =               T14                                       -> resultado
+ 58: *               10                   2                    -> T16
+ 59: =               T16                                       -> resultado
+ 60: PRINT           resultado                                 -> 
+ 61: =               0                                         -> temp
+ 62: TOPE            miPila                                    -> T17
+ 63: =               T17                                       -> temp
+ 64: +               temp                 1                    -> T18
+ 65: =               T18                                       -> temp
+ 66: PRINT           temp                                      -> 
+ 67: VACIA           miPila                                    -> T19
+ 68: IF_FALSE        T19                  GOTO                 -> L2
  69: PRINT           0                                         -> 
- 70: ETIQUETA                                                  -> L4
- 71: ELIMINAR_FINAL                                            -> miLista
- 72: ELIMINAR_INICIO                                           -> miLista
- 73: INSERTAR        200                  999                  -> miHash
- 74: =               0                                         -> valorTope
- 75: TOPE            miPila                                    -> T21
- 76: =               T21                                       -> valorTope
- 77: >               valorTope            5                    -> T22
- 78: IF_FALSE        T22                  GOTO                 -> L6
- 79: PRINT           valorTope                                 -> 
- 80: ETIQUETA                                                  -> L6
+ 70: ETIQUETA                                                  -> L2
+ 71: VACIA           miCola                                    -> T20
+ 72: IF_FALSE        T20                  GOTO                 -> L4
+ 73: PRINT           0                                         -> 
+ 74: ETIQUETA                                                  -> L4
+ 75: ELIMINAR_FINAL                                            -> miLista
+ 76: ELIMINAR_INICIO                                           -> miLista
+ 77: INSERTAR        200                  999                  -> miHash
+ 78: =               0                                         -> valorTope
+ 79: TOPE            miPila                                    -> T21
+ 80: =               T21                                       -> valorTope
+ 81: >               valorTope            5                    -> T22
+ 82: IF_FALSE        T22                  GOTO                 -> L6
+ 83: PRINT           valorTope                                 -> 
+ 84: ETIQUETA                                                  -> L6
 
 ══════════════════════════════════════════════════════════════════════
 

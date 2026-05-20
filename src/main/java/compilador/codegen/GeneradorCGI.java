@@ -136,7 +136,10 @@ public class GeneradorCGI {
                     agregar("=", dirVal, "", idVar);
                 }
             } else if (tipoVar.equals("PILA") || tipoVar.equals("PILA_CIRCULAR")
-                    || tipoVar.equals("COLA") || tipoVar.equals("BICOLA")) {
+                    || tipoVar.equals("COLA") || tipoVar.equals("BICOLA")
+                    || tipoVar.equals("LISTA_ENLAZADA") || tipoVar.equals("LISTA_CIRCULAR")
+                    || tipoVar.equals("LISTA_DOBLE_ENLAZADA") || tipoVar.equals("ARBOL_BINARIO")
+                    || tipoVar.equals("GRAFO") || tipoVar.equals("TABLA_HASH")) {
                 agregar("ALLOC", "100", tipoVar, idVar);
             }
             return "";

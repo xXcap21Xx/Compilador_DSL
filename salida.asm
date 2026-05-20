@@ -11,24 +11,33 @@
     newline db 0Dh, 0Ah, '$'
     msg_error db 'Error en la operacion', 0Dh, 0Ah, '$'
 
+    HEAP dw 1000 dup(0)
+    HEAP_PTR dw 2
     miPila dw 100 dup(0)
     miPila_top dw 0
     miCola dw 50 dup(0)
     miCola_front dw 0
     miCola_rear dw 0
     miCola_count dw 0
+    miLista_head dw 0
+    miLista_tail dw 0
+    miArbol_root dw 0
+    miGrafo_nodes dw 100 dup(0)
+    miGrafo_node_count dw 0
+    miGrafo_edges_from dw 100 dup(0)
+    miGrafo_edges_to dw 100 dup(0)
+    miGrafo_edge_count dw 0
+    miHash_keys dw 100 dup(0)
+    miHash_values dw 100 dup(0)
+    miHash_count dw 0
     T1 dw 0
     T2 dw 0
     T3 dw 0
-    miLista dw 0
-    miArbol dw 0
     T4 dw 0
     T5 dw 0
     T6 dw 0
     T7 dw 0
-    miGrafo dw 0
     T8 dw 0
-    miHash dw 0
     resultado dw 0
     T10 dw 0
     T12 dw 0
@@ -128,98 +137,446 @@ ASM_L7:
     call print_num
     mov dx, offset newline
     call print_string
-    ; INSERTAR_FINAL 5 EN miLista
+    ; CREAR LISTA miLista
+    ; INSERTAR_FINAL 5 EN miLista (nodo HEAP: valor, sig)
     mov ax, 5
-    mov [miLista], ax
-    ; INSERTAR_FINAL 10 EN miLista
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 4
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    cmp word ptr [miLista_head], 0
+    jne ASM_L8
+    mov [miLista_head], si
+    mov [miLista_tail], si
+    jmp ASM_L9
+ASM_L8:
+    mov bx, [miLista_tail]
+    mov HEAP[bx+2], si
+    mov [miLista_tail], si
+ASM_L9:
+    ; INSERTAR_FINAL 10 EN miLista (nodo HEAP: valor, sig)
     mov ax, 10
-    mov [miLista], ax
-    ; INSERTAR_FINAL 15 EN miLista
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 4
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    cmp word ptr [miLista_head], 0
+    jne ASM_L10
+    mov [miLista_head], si
+    mov [miLista_tail], si
+    jmp ASM_L11
+ASM_L10:
+    mov bx, [miLista_tail]
+    mov HEAP[bx+2], si
+    mov [miLista_tail], si
+ASM_L11:
+    ; INSERTAR_FINAL 15 EN miLista (nodo HEAP: valor, sig)
     mov ax, 15
-    mov [miLista], ax
-    ; AGREGARNODO 1 25 EN miArbol
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 4
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    cmp word ptr [miLista_head], 0
+    jne ASM_L12
+    mov [miLista_head], si
+    mov [miLista_tail], si
+    jmp ASM_L13
+ASM_L12:
+    mov bx, [miLista_tail]
+    mov HEAP[bx+2], si
+    mov [miLista_tail], si
+ASM_L13:
+    ; CREAR ARBOL_BINARIO miArbol
+    ; AGREGARNODO 25 EN miArbol (nodo HEAP: valor, izq, der)
     mov ax, 25
-    mov [miArbol], ax
-    ; AGREGARNODO 1 15 EN miArbol
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 6
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    mov word ptr HEAP[si+4], 0
+    cmp word ptr [miArbol_root], 0
+    jne ASM_L14
+    mov [miArbol_root], si
+    jmp ASM_L19
+ASM_L14:
+    mov bx, [miArbol_root]
+ASM_L15:
+    cmp ax, HEAP[bx]
+    jg ASM_L16
+    cmp word ptr HEAP[bx+2], 0
+    je ASM_L17
+    mov bx, HEAP[bx+2]
+    jmp ASM_L15
+ASM_L17:
+    mov HEAP[bx+2], si
+    jmp ASM_L19
+ASM_L16:
+    cmp word ptr HEAP[bx+4], 0
+    je ASM_L18
+    mov bx, HEAP[bx+4]
+    jmp ASM_L15
+ASM_L18:
+    mov HEAP[bx+4], si
+ASM_L19:
+    ; AGREGARNODO 15 EN miArbol (nodo HEAP: valor, izq, der)
     mov ax, 15
-    mov [miArbol], ax
-    ; AGREGARNODO 1 35 EN miArbol
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 6
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    mov word ptr HEAP[si+4], 0
+    cmp word ptr [miArbol_root], 0
+    jne ASM_L20
+    mov [miArbol_root], si
+    jmp ASM_L25
+ASM_L20:
+    mov bx, [miArbol_root]
+ASM_L21:
+    cmp ax, HEAP[bx]
+    jg ASM_L22
+    cmp word ptr HEAP[bx+2], 0
+    je ASM_L23
+    mov bx, HEAP[bx+2]
+    jmp ASM_L21
+ASM_L23:
+    mov HEAP[bx+2], si
+    jmp ASM_L25
+ASM_L22:
+    cmp word ptr HEAP[bx+4], 0
+    je ASM_L24
+    mov bx, HEAP[bx+4]
+    jmp ASM_L21
+ASM_L24:
+    mov HEAP[bx+4], si
+ASM_L25:
+    ; AGREGARNODO 35 EN miArbol (nodo HEAP: valor, izq, der)
     mov ax, 35
-    mov [miArbol], ax
-    ; AGREGARNODO 1 10 EN miArbol
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 6
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    mov word ptr HEAP[si+4], 0
+    cmp word ptr [miArbol_root], 0
+    jne ASM_L26
+    mov [miArbol_root], si
+    jmp ASM_L31
+ASM_L26:
+    mov bx, [miArbol_root]
+ASM_L27:
+    cmp ax, HEAP[bx]
+    jg ASM_L28
+    cmp word ptr HEAP[bx+2], 0
+    je ASM_L29
+    mov bx, HEAP[bx+2]
+    jmp ASM_L27
+ASM_L29:
+    mov HEAP[bx+2], si
+    jmp ASM_L31
+ASM_L28:
+    cmp word ptr HEAP[bx+4], 0
+    je ASM_L30
+    mov bx, HEAP[bx+4]
+    jmp ASM_L27
+ASM_L30:
+    mov HEAP[bx+4], si
+ASM_L31:
+    ; AGREGARNODO 10 EN miArbol (nodo HEAP: valor, izq, der)
     mov ax, 10
-    mov [miArbol], ax
-    ; AGREGARNODO 1 20 EN miArbol
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 6
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    mov word ptr HEAP[si+4], 0
+    cmp word ptr [miArbol_root], 0
+    jne ASM_L32
+    mov [miArbol_root], si
+    jmp ASM_L37
+ASM_L32:
+    mov bx, [miArbol_root]
+ASM_L33:
+    cmp ax, HEAP[bx]
+    jg ASM_L34
+    cmp word ptr HEAP[bx+2], 0
+    je ASM_L35
+    mov bx, HEAP[bx+2]
+    jmp ASM_L33
+ASM_L35:
+    mov HEAP[bx+2], si
+    jmp ASM_L37
+ASM_L34:
+    cmp word ptr HEAP[bx+4], 0
+    je ASM_L36
+    mov bx, HEAP[bx+4]
+    jmp ASM_L33
+ASM_L36:
+    mov HEAP[bx+4], si
+ASM_L37:
+    ; AGREGARNODO 20 EN miArbol (nodo HEAP: valor, izq, der)
     mov ax, 20
-    mov [miArbol], ax
-    ; AGREGARNODO 1 30 EN miArbol
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 6
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    mov word ptr HEAP[si+4], 0
+    cmp word ptr [miArbol_root], 0
+    jne ASM_L38
+    mov [miArbol_root], si
+    jmp ASM_L43
+ASM_L38:
+    mov bx, [miArbol_root]
+ASM_L39:
+    cmp ax, HEAP[bx]
+    jg ASM_L40
+    cmp word ptr HEAP[bx+2], 0
+    je ASM_L41
+    mov bx, HEAP[bx+2]
+    jmp ASM_L39
+ASM_L41:
+    mov HEAP[bx+2], si
+    jmp ASM_L43
+ASM_L40:
+    cmp word ptr HEAP[bx+4], 0
+    je ASM_L42
+    mov bx, HEAP[bx+4]
+    jmp ASM_L39
+ASM_L42:
+    mov HEAP[bx+4], si
+ASM_L43:
+    ; AGREGARNODO 30 EN miArbol (nodo HEAP: valor, izq, der)
     mov ax, 30
-    mov [miArbol], ax
-    ; AGREGARNODO 1 40 EN miArbol
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 6
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    mov word ptr HEAP[si+4], 0
+    cmp word ptr [miArbol_root], 0
+    jne ASM_L44
+    mov [miArbol_root], si
+    jmp ASM_L49
+ASM_L44:
+    mov bx, [miArbol_root]
+ASM_L45:
+    cmp ax, HEAP[bx]
+    jg ASM_L46
+    cmp word ptr HEAP[bx+2], 0
+    je ASM_L47
+    mov bx, HEAP[bx+2]
+    jmp ASM_L45
+ASM_L47:
+    mov HEAP[bx+2], si
+    jmp ASM_L49
+ASM_L46:
+    cmp word ptr HEAP[bx+4], 0
+    je ASM_L48
+    mov bx, HEAP[bx+4]
+    jmp ASM_L45
+ASM_L48:
+    mov HEAP[bx+4], si
+ASM_L49:
+    ; AGREGARNODO 40 EN miArbol (nodo HEAP: valor, izq, der)
     mov ax, 40
-    mov [miArbol], ax
-    ; PREORDEN EN miArbol
-    mov ax, [miArbol]
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 6
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    mov word ptr HEAP[si+4], 0
+    cmp word ptr [miArbol_root], 0
+    jne ASM_L50
+    mov [miArbol_root], si
+    jmp ASM_L55
+ASM_L50:
+    mov bx, [miArbol_root]
+ASM_L51:
+    cmp ax, HEAP[bx]
+    jg ASM_L52
+    cmp word ptr HEAP[bx+2], 0
+    je ASM_L53
+    mov bx, HEAP[bx+2]
+    jmp ASM_L51
+ASM_L53:
+    mov HEAP[bx+2], si
+    jmp ASM_L55
+ASM_L52:
+    cmp word ptr HEAP[bx+4], 0
+    je ASM_L54
+    mov bx, HEAP[bx+4]
+    jmp ASM_L51
+ASM_L54:
+    mov HEAP[bx+4], si
+ASM_L55:
+    ; PREORDEN EN miArbol recorriendo enlaces HEAP
+    mov bx, [miArbol_root]
+    xor cx, cx
+    mov word ptr [T4], 0
+ASM_L56:
+    cmp bx, 0
+    je ASM_L57
+    inc cx
+    mov ax, HEAP[bx]
     mov [T4], ax
+    mov bx, HEAP[bx+4]
+    jmp ASM_L56
+ASM_L57:
     ; PRINT T4
     mov ax, [T4]
     call print_num
     mov dx, offset newline
     call print_string
-    ; INORDEN EN miArbol
-    mov ax, [miArbol]
+    ; INORDEN EN miArbol recorriendo enlaces HEAP
+    mov bx, [miArbol_root]
+    xor cx, cx
+    mov word ptr [T5], 0
+ASM_L58:
+    cmp bx, 0
+    je ASM_L59
+    inc cx
+    mov ax, HEAP[bx]
     mov [T5], ax
+    mov bx, HEAP[bx+2]
+    jmp ASM_L58
+ASM_L59:
     ; PRINT T5
     mov ax, [T5]
     call print_num
     mov dx, offset newline
     call print_string
-    ; POSTORDEN EN miArbol
-    mov ax, [miArbol]
+    ; POSTORDEN EN miArbol recorriendo enlaces HEAP
+    mov bx, [miArbol_root]
+    xor cx, cx
+    mov word ptr [T6], 0
+ASM_L60:
+    cmp bx, 0
+    je ASM_L61
+    inc cx
+    mov ax, HEAP[bx]
     mov [T6], ax
+    mov bx, HEAP[bx+4]
+    jmp ASM_L60
+ASM_L61:
     ; PRINT T6
     mov ax, [T6]
     call print_num
     mov dx, offset newline
     call print_string
-    ; RECORRIDOPORNIVELES EN miArbol
-    mov ax, [miArbol]
+    ; RECORRIDOPORNIVELES EN miArbol recorriendo enlaces HEAP
+    mov bx, [miArbol_root]
+    xor cx, cx
+    mov word ptr [T7], 0
+ASM_L62:
+    cmp bx, 0
+    je ASM_L63
+    inc cx
+    mov ax, HEAP[bx]
     mov [T7], ax
+    mov bx, HEAP[bx+4]
+    jmp ASM_L62
+ASM_L63:
     ; PRINT T7
     mov ax, [T7]
     call print_num
     mov dx, offset newline
     call print_string
-    ; AGREGARNODO 1 100 EN miGrafo
-    mov ax, 100
-    mov [miGrafo], ax
-    ; AGREGARNODO 2 200 EN miGrafo
-    mov ax, 200
-    mov [miGrafo], ax
-    ; AGREGARNODO 3 300 EN miGrafo
-    mov ax, 300
-    mov [miGrafo], ax
-    ; AGREGARNODO 4 400 EN miGrafo
-    mov ax, 400
-    mov [miGrafo], ax
-    ; AGREGARNODO 5 500 EN miGrafo
-    mov ax, 500
-    mov [miGrafo], ax
-    ; AGREGARARISTA 1 2 EN miGrafo
+    ; CREAR GRAFO miGrafo CAPACIDAD 100
+    ; AGREGARNODO 1 EN miGrafo
+    cmp word ptr [miGrafo_node_count], 100
+    jge ASM_L64
+    mov ax, 1
+    mov bx, [miGrafo_node_count]
+    shl bx, 1
+    mov miGrafo_nodes[bx], ax
+    inc word ptr [miGrafo_node_count]
+ASM_L64:
+    ; AGREGARNODO 2 EN miGrafo
+    cmp word ptr [miGrafo_node_count], 100
+    jge ASM_L65
     mov ax, 2
-    mov [miGrafo], ax
-    ; AGREGARARISTA 2 3 EN miGrafo
+    mov bx, [miGrafo_node_count]
+    shl bx, 1
+    mov miGrafo_nodes[bx], ax
+    inc word ptr [miGrafo_node_count]
+ASM_L65:
+    ; AGREGARNODO 3 EN miGrafo
+    cmp word ptr [miGrafo_node_count], 100
+    jge ASM_L66
     mov ax, 3
-    mov [miGrafo], ax
-    ; AGREGARARISTA 3 4 EN miGrafo
+    mov bx, [miGrafo_node_count]
+    shl bx, 1
+    mov miGrafo_nodes[bx], ax
+    inc word ptr [miGrafo_node_count]
+ASM_L66:
+    ; AGREGARNODO 4 EN miGrafo
+    cmp word ptr [miGrafo_node_count], 100
+    jge ASM_L67
     mov ax, 4
-    mov [miGrafo], ax
+    mov bx, [miGrafo_node_count]
+    shl bx, 1
+    mov miGrafo_nodes[bx], ax
+    inc word ptr [miGrafo_node_count]
+ASM_L67:
+    ; AGREGARNODO 5 EN miGrafo
+    cmp word ptr [miGrafo_node_count], 100
+    jge ASM_L68
+    mov ax, 5
+    mov bx, [miGrafo_node_count]
+    shl bx, 1
+    mov miGrafo_nodes[bx], ax
+    inc word ptr [miGrafo_node_count]
+ASM_L68:
+    ; AGREGARARISTA 1 2 EN miGrafo
+    cmp word ptr [miGrafo_edge_count], 100
+    jge ASM_L69
+    mov bx, [miGrafo_edge_count]
+    shl bx, 1
+    mov ax, 1
+    mov miGrafo_edges_from[bx], ax
+    mov ax, 2
+    mov miGrafo_edges_to[bx], ax
+    inc word ptr [miGrafo_edge_count]
+ASM_L69:
+    ; AGREGARARISTA 2 3 EN miGrafo
+    cmp word ptr [miGrafo_edge_count], 100
+    jge ASM_L70
+    mov bx, [miGrafo_edge_count]
+    shl bx, 1
+    mov ax, 2
+    mov miGrafo_edges_from[bx], ax
+    mov ax, 3
+    mov miGrafo_edges_to[bx], ax
+    inc word ptr [miGrafo_edge_count]
+ASM_L70:
+    ; AGREGARARISTA 3 4 EN miGrafo
+    cmp word ptr [miGrafo_edge_count], 100
+    jge ASM_L71
+    mov bx, [miGrafo_edge_count]
+    shl bx, 1
+    mov ax, 3
+    mov miGrafo_edges_from[bx], ax
+    mov ax, 4
+    mov miGrafo_edges_to[bx], ax
+    inc word ptr [miGrafo_edge_count]
+ASM_L71:
     ; AGREGARARISTA 4 5 EN miGrafo
+    cmp word ptr [miGrafo_edge_count], 100
+    jge ASM_L72
+    mov bx, [miGrafo_edge_count]
+    shl bx, 1
+    mov ax, 4
+    mov miGrafo_edges_from[bx], ax
     mov ax, 5
-    mov [miGrafo], ax
+    mov miGrafo_edges_to[bx], ax
+    inc word ptr [miGrafo_edge_count]
+ASM_L72:
     ; AGREGARARISTA 1 5 EN miGrafo
+    cmp word ptr [miGrafo_edge_count], 100
+    jge ASM_L73
+    mov bx, [miGrafo_edge_count]
+    shl bx, 1
+    mov ax, 1
+    mov miGrafo_edges_from[bx], ax
     mov ax, 5
-    mov [miGrafo], ax
+    mov miGrafo_edges_to[bx], ax
+    inc word ptr [miGrafo_edge_count]
+ASM_L73:
     ; VECINOS EN 1
     mov ax, 0
     mov [T8], ax
@@ -228,15 +585,40 @@ ASM_L7:
     call print_num
     mov dx, offset newline
     call print_string
+    ; CREAR TABLA_HASH miHash CAPACIDAD 100
     ; INSERTAR 101 1000 EN miHash
+    cmp word ptr [miHash_count], 100
+    jge ASM_L74
+    mov bx, [miHash_count]
+    shl bx, 1
+    mov ax, 101
+    mov miHash_keys[bx], ax
     mov ax, 1000
-    mov [miHash], ax
+    mov miHash_values[bx], ax
+    inc word ptr [miHash_count]
+ASM_L74:
     ; INSERTAR 102 2000 EN miHash
+    cmp word ptr [miHash_count], 100
+    jge ASM_L75
+    mov bx, [miHash_count]
+    shl bx, 1
+    mov ax, 102
+    mov miHash_keys[bx], ax
     mov ax, 2000
-    mov [miHash], ax
+    mov miHash_values[bx], ax
+    inc word ptr [miHash_count]
+ASM_L75:
     ; INSERTAR 103 3000 EN miHash
+    cmp word ptr [miHash_count], 100
+    jge ASM_L76
+    mov bx, [miHash_count]
+    shl bx, 1
+    mov ax, 103
+    mov miHash_keys[bx], ax
     mov ax, 3000
-    mov [miHash], ax
+    mov miHash_values[bx], ax
+    inc word ptr [miHash_count]
+ASM_L76:
     ; resultado = 0
     mov ax, 0
     mov [resultado], ax
@@ -282,16 +664,16 @@ ASM_L7:
     mov [temp], ax
     ; TOPE EN miPila
     cmp word ptr [miPila_top], 0
-    je ASM_L8
+    je ASM_L77
     mov bx, [miPila_top]
     dec bx
     shl bx, 1
     mov ax, miPila[bx]
     mov [T17], ax
-    jmp ASM_L9
-ASM_L8:
+    jmp ASM_L78
+ASM_L77:
     mov word ptr [T17], 0
-ASM_L9:
+ASM_L78:
     ; temp = T17
     mov ax, [T17]
     mov [temp], ax
@@ -311,11 +693,11 @@ ASM_L9:
     ; VACIA
     mov word ptr [T19], 0
     cmp word ptr [miPila_top], 0
-    je ASM_L10
-    jmp ASM_L11
-ASM_L10:
+    je ASM_L79
+    jmp ASM_L80
+ASM_L79:
     mov word ptr [T19], 1
-ASM_L11:
+ASM_L80:
     ; IF_FALSE T19 GOTO L2
     mov ax, [T19]
     cmp ax, 0
@@ -329,11 +711,11 @@ L2:
     ; VACIA
     mov word ptr [T20], 0
     cmp word ptr [miCola_count], 0
-    je ASM_L12
-    jmp ASM_L13
-ASM_L12:
+    je ASM_L81
+    jmp ASM_L82
+ASM_L81:
     mov word ptr [T20], 1
-ASM_L13:
+ASM_L82:
     ; IF_FALSE T20 GOTO L4
     mov ax, [T20]
     cmp ax, 0
@@ -344,28 +726,64 @@ ASM_L13:
     mov dx, offset newline
     call print_string
 L4:
-    ; ELIMINAR_FINAL EN miLista
-    mov word ptr [miLista], 0
-    ; ELIMINAR_INICIO EN miLista
-    mov word ptr [miLista], 0
+    ; ELIMINAR_FINAL EN miLista usando punteros HEAP
+    cmp word ptr [miLista_head], 0
+    je ASM_L86
+    mov bx, [miLista_head]
+    cmp bx, [miLista_tail]
+    je ASM_L83
+ASM_L84:
+    mov si, HEAP[bx+2]
+    cmp si, [miLista_tail]
+    je ASM_L85
+    cmp si, 0
+    je ASM_L86
+    mov bx, si
+    jmp ASM_L84
+ASM_L85:
+    mov word ptr HEAP[bx+2], 0
+    mov [miLista_tail], bx
+    jmp ASM_L86
+ASM_L83:
+    mov word ptr [miLista_head], 0
+    mov word ptr [miLista_tail], 0
+ASM_L86:
+    ; ELIMINAR_INICIO EN miLista usando punteros HEAP
+    cmp word ptr [miLista_head], 0
+    je ASM_L87
+    mov bx, [miLista_head]
+    mov ax, HEAP[bx+2]
+    mov [miLista_head], ax
+    cmp ax, 0
+    jne ASM_L87
+    mov word ptr [miLista_tail], 0
+ASM_L87:
     ; INSERTAR 200 999 EN miHash
+    cmp word ptr [miHash_count], 100
+    jge ASM_L88
+    mov bx, [miHash_count]
+    shl bx, 1
+    mov ax, 200
+    mov miHash_keys[bx], ax
     mov ax, 999
-    mov [miHash], ax
+    mov miHash_values[bx], ax
+    inc word ptr [miHash_count]
+ASM_L88:
     ; valorTope = 0
     mov ax, 0
     mov [valorTope], ax
     ; TOPE EN miPila
     cmp word ptr [miPila_top], 0
-    je ASM_L14
+    je ASM_L89
     mov bx, [miPila_top]
     dec bx
     shl bx, 1
     mov ax, miPila[bx]
     mov [T21], ax
-    jmp ASM_L15
-ASM_L14:
+    jmp ASM_L90
+ASM_L89:
     mov word ptr [T21], 0
-ASM_L15:
+ASM_L90:
     ; valorTope = T21
     mov ax, [T21]
     mov [valorTope], ax
@@ -373,12 +791,12 @@ ASM_L15:
     mov ax, [valorTope]
     mov bx, 5
     cmp ax, bx
-    jg ASM_L16
+    jg ASM_L91
     mov [T22], 0
-    jmp ASM_L17
-ASM_L16:
+    jmp ASM_L92
+ASM_L91:
     mov [T22], 1
-ASM_L17:
+ASM_L92:
     ; IF_FALSE T22 GOTO L6
     mov ax, [T22]
     cmp ax, 0
