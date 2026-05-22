@@ -104,6 +104,7 @@ public class GeneradorEnsambladorGrafico {
             case "INSERTAR_INICIO":
             case "AGREGARNODO":
             case "AGREGARARISTA":
+            case "ACTUALIZAR":
                 traducirInsercion(op, arg1, arg2, res);
                 break;
             case "DESAPILAR":
@@ -129,6 +130,9 @@ public class GeneradorEnsambladorGrafico {
                 break;
             case "TAMANO":
                 traducirTamanoEstructura(arg1, res);
+                break;
+            case "BUSCAR":
+                traducirBuscarEstructura(arg1, res);
                 break;
             case "PREORDEN":
             case "INORDEN":
@@ -253,7 +257,24 @@ public class GeneradorEnsambladorGrafico {
         if ("HASH".equals(tipo) && "INSERTAR".equals(op)) {
             insertarHash(arg1, arg2, estructura);
             emitir("    call GRAFICAR_TODO");
+            return;
         }
+
+        if ("HASH".equals(tipo) && "ACTUALIZAR".equals(op)) {
+            actualizarHash(arg1, arg2, estructura);
+            emitir("    call GRAFICAR_TODO");
+        }
+    }
+
+    private void traducirBuscarEstructura(String clave, String estructura) {
+        String tipo = estructurasTipo.get(estructura);
+        if ("HASH".equals(tipo)) {
+            buscarHash(clave, estructura);
+            return;
+        }
+
+        emitir("    ; Operacion grafica pendiente: BUSCAR " + clave + " EN " + estructura);
+        emitir("    call GRAFICAR_TODO");
     }
 
     private void traducirEliminacion(String op, String estructura) {
@@ -450,6 +471,76 @@ public class GeneradorEnsambladorGrafico {
         emitir("    mov " + hash + "_values[bx], ax");
         emitir("    inc word ptr [" + hash + "_count]");
         emitir(fin + ":");
+    }
+
+    private void actualizarHash(String clave, String valor, String hash) {
+        int cap = estructurasTamano.getOrDefault(hash, 100);
+        String loop = nuevaEtiqueta();
+        String encontrado = nuevaEtiqueta();
+        String insertar = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+        emitir("    ; ACTUALIZAR " + clave + " " + valor + " EN " + hash);
+        cargarAX(clave);
+        emitir("    mov [gfx_busqueda], ax");
+        emitir("    mov si, 0");
+        emitir(loop + ":");
+        emitir("    cmp si, [" + hash + "_count]");
+        emitir("    jge " + insertar);
+        emitir("    mov bx, si");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + hash + "_keys[bx]");
+        emitir("    cmp ax, [gfx_busqueda]");
+        emitir("    je " + encontrado);
+        emitir("    inc si");
+        emitir("    jmp " + loop);
+        emitir(encontrado + ":");
+        cargarAX(valor);
+        emitir("    mov " + hash + "_values[bx], ax");
+        emitir("    jmp " + fin);
+        emitir(insertar + ":");
+        emitir("    cmp word ptr [" + hash + "_count], " + cap);
+        emitir("    jge " + fin);
+        emitir("    mov bx, [" + hash + "_count]");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, [gfx_busqueda]");
+        emitir("    mov " + hash + "_keys[bx], ax");
+        cargarAX(valor);
+        emitir("    mov " + hash + "_values[bx], ax");
+        emitir("    inc word ptr [" + hash + "_count]");
+        emitir(fin + ":");
+    }
+
+    private void buscarHash(String clave, String hash) {
+        String loop = nuevaEtiqueta();
+        String encontrado = nuevaEtiqueta();
+        String noEncontrado = nuevaEtiqueta();
+        String imprimir = nuevaEtiqueta();
+        emitir("    ; BUSCAR " + clave + " EN " + hash);
+        cargarAX(clave);
+        emitir("    mov [gfx_busqueda], ax");
+        emitir("    mov word ptr [gfx_valor], 0");
+        emitir("    mov si, 0");
+        emitir(loop + ":");
+        emitir("    cmp si, [" + hash + "_count]");
+        emitir("    jge " + noEncontrado);
+        emitir("    mov bx, si");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + hash + "_keys[bx]");
+        emitir("    cmp ax, [gfx_busqueda]");
+        emitir("    je " + encontrado);
+        emitir("    inc si");
+        emitir("    jmp " + loop);
+        emitir(encontrado + ":");
+        emitir("    mov ax, " + hash + "_values[bx]");
+        emitir("    mov [gfx_valor], ax");
+        emitir("    jmp " + imprimir);
+        emitir(noEncontrado + ":");
+        emitir("    mov word ptr [gfx_valor], 0");
+        emitir(imprimir + ":");
+        emitir("    mov ax, [gfx_valor]");
+        emitir("    mov [gfx_busqueda_resultado], ax");
+        emitir("    mov word ptr [gfx_busqueda_activa], 1");
+        emitir("    call GRAFICAR_TODO");
     }
 
     private void traducirPrint(String valor) {
@@ -838,8 +929,30 @@ public class GeneradorEnsambladorGrafico {
         for (Map.Entry<String, String> e : estructurasTipo.entrySet()) {
             emitir("    call GRAFICAR_" + e.getValue() + "_" + e.getKey());
         }
+        emitir("    call DIBUJAR_ULTIMA_BUSQUEDA");
         emitir("    ret");
         emitir("GRAFICAR_TODO endp");
+        emitir("");
+        rutinaUltimaBusqueda();
+    }
+
+    private void rutinaUltimaBusqueda() {
+        String fin = "DUB_FIN";
+        emitir("DIBUJAR_ULTIMA_BUSQUEDA proc");
+        emitir("    cmp word ptr [gfx_busqueda_activa], 1");
+        emitir("    jne " + fin);
+        emitir("    mov cx, 104");
+        emitir("    mov dx, 88");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("BUSCAR ");
+        emitir("    mov ax, [gfx_busqueda]");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitirTextoGrafico(": ");
+        emitir("    mov ax, [gfx_busqueda_resultado]");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitir(fin + ":");
+        emitir("    ret");
+        emitir("DIBUJAR_ULTIMA_BUSQUEDA endp");
         emitir("");
     }
 
@@ -1275,32 +1388,82 @@ public class GeneradorEnsambladorGrafico {
     private void rutinaGraficaHash(String nombre) {
         String loop = nombre + "_gh_loop";
         String fin = nombre + "_gh_fin";
+        String finBorde = nombre + "_gh_fin_borde";
         emitir("GRAFICAR_HASH_" + nombre + " proc");
+        emitir("    mov cx, 104");
+        emitir("    mov dx, 104");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("+--------+-------+-------+");
+        emitir("    mov cx, 104");
+        emitir("    mov dx, 112");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("| INDICE | CLAVE | VALOR |");
+        emitir("    mov cx, 104");
+        emitir("    mov dx, 120");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("+--------+-------+-------+");
         emitir("    mov word ptr [gfx_i], 0");
         emitir(loop + ":");
         emitir("    mov ax, [gfx_i]");
         emitir("    cmp ax, [" + nombre + "_count]");
         emitir("    jge " + fin);
-        emitir("    mov bx, ax");
+        emitir("    cmp ax, 8");
+        emitir("    jge " + fin);
+        emitir("    mov ax, [gfx_i]");
+        emitir("    mov bx, 8");
+        emitir("    mul bx");
+        emitir("    mov dx, 128");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 104");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("|        |       |       |");
+        emitir("    mov ax, [gfx_i]");
+        emitir("    mov bx, 8");
+        emitir("    mul bx");
+        emitir("    mov dx, 128");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 136");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitir("    mov ax, [gfx_i]");
+        emitir("    inc ax");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitir("    mov ax, [gfx_i]");
+        emitir("    mov si, 8");
+        emitir("    mul si");
+        emitir("    mov dx, 128");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 200");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitir("    mov bx, [gfx_i]");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + nombre + "_keys[bx]");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitir("    mov ax, [gfx_i]");
+        emitir("    mov si, 8");
+        emitir("    mul si");
+        emitir("    mov dx, 128");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 264");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitir("    mov bx, [gfx_i]");
         emitir("    shl bx, 1");
         emitir("    mov ax, " + nombre + "_values[bx]");
-        emitir("    mov [gfx_valor], ax");
-        emitir("    mov ax, [gfx_i]");
-        emitir("    mov bx, 18");
-        emitir("    mul bx");
-        emitir("    mov dx, 150");
-        emitir("    add dx, ax");
-        emitir("    mov cx, 245");
-        emitir("    mov si, 44");
-        emitir("    mov di, 14");
-        emitir("    mov al, 0Dh");
-        emitir("    call DIBUJAR_RECTANGULO");
-        emitir("    call SET_CURSOR_PIXEL");
-        emitir("    mov ax, [gfx_valor]");
         emitir("    call PRINT_NUM_GRAFICO");
         emitir("    inc word ptr [gfx_i]");
         emitir("    jmp " + loop);
         emitir(fin + ":");
+        emitir("    mov ax, [" + nombre + "_count]");
+        emitir("    cmp ax, 8");
+        emitir("    jle " + finBorde);
+        emitir("    mov ax, 8");
+        emitir(finBorde + ":");
+        emitir("    mov bx, 8");
+        emitir("    mul bx");
+        emitir("    mov dx, 128");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 104");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("+--------+-------+-------+");
         emitir("    ret");
         emitir("GRAFICAR_HASH_" + nombre + " endp");
         emitir("");
@@ -1319,6 +1482,8 @@ public class GeneradorEnsambladorGrafico {
                 sb.append("    gfx_i dw 0\n");
                 sb.append("    gfx_valor dw 0\n");
                 sb.append("    gfx_busqueda dw 0\n");
+                sb.append("    gfx_busqueda_resultado dw 0\n");
+                sb.append("    gfx_busqueda_activa dw 0\n");
                 sb.append("    gfx_ultimo_desapilado dw 0\n");
                 sb.append("    gfx_color db 0Fh\n");
                 if (colaNivelesNecesaria) {

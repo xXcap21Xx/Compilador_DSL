@@ -12,6 +12,8 @@
     gfx_i dw 0
     gfx_valor dw 0
     gfx_busqueda dw 0
+    gfx_busqueda_resultado dw 0
+    gfx_busqueda_activa dw 0
     gfx_ultimo_desapilado dw 0
     gfx_color db 0Fh
     rect_x dw 0
@@ -19,10 +21,9 @@
     rect_w dw 0
     rect_h dw 0
     rect_color db 0
-    miPila dw 100 dup(0)
-    miPila_top dw 0
-    T1 dw 0
-    T3 dw 0
+    miHash_keys dw 100 dup(0)
+    miHash_values dw 100 dup(0)
+    miHash_count dw 0
 
 .code
 main proc
@@ -33,192 +34,101 @@ main proc
     mov ax, 0013h
     int 10h
 
-    ; CREAR PILA miPila TAMANO 100
+    ; CREAR HASH miHash TAMANO 100
     call GRAFICAR_TODO
-    ; APILAR 5 EN miPila
-    cmp word ptr [miPila_top], 100
+    ; INSERTAR 101 1000 EN miHash
+    cmp word ptr [miHash_count], 100
     jge GFX_L1
-    mov ax, 5
-    mov bx, [miPila_top]
+    mov bx, [miHash_count]
     shl bx, 1
-    mov miPila[bx], ax
-    inc word ptr [miPila_top]
+    mov ax, 101
+    mov miHash_keys[bx], ax
+    mov ax, 1000
+    mov miHash_values[bx], ax
+    inc word ptr [miHash_count]
 GFX_L1:
     call GRAFICAR_TODO
-    ; APILAR 15 EN miPila
-    cmp word ptr [miPila_top], 100
+    ; INSERTAR 102 2000 EN miHash
+    cmp word ptr [miHash_count], 100
     jge GFX_L2
-    mov ax, 15
-    mov bx, [miPila_top]
+    mov bx, [miHash_count]
     shl bx, 1
-    mov miPila[bx], ax
-    inc word ptr [miPila_top]
+    mov ax, 102
+    mov miHash_keys[bx], ax
+    mov ax, 2000
+    mov miHash_values[bx], ax
+    inc word ptr [miHash_count]
 GFX_L2:
     call GRAFICAR_TODO
-    ; APILAR 25 EN miPila
-    cmp word ptr [miPila_top], 100
+    ; INSERTAR 103 3000 EN miHash
+    cmp word ptr [miHash_count], 100
     jge GFX_L3
-    mov ax, 25
-    mov bx, [miPila_top]
+    mov bx, [miHash_count]
     shl bx, 1
-    mov miPila[bx], ax
-    inc word ptr [miPila_top]
+    mov ax, 103
+    mov miHash_keys[bx], ax
+    mov ax, 3000
+    mov miHash_values[bx], ax
+    inc word ptr [miHash_count]
 GFX_L3:
     call GRAFICAR_TODO
-    ; TOPE EN miPila -> T1
-    cmp word ptr [miPila_top], 0
-    je GFX_L4
-    mov bx, [miPila_top]
-    dec bx
-    shl bx, 1
-    mov ax, miPila[bx]
-    mov [T1], ax
-    jmp GFX_L5
+    ; BUSCAR 102 EN miHash
+    mov ax, 102
+    mov [gfx_busqueda], ax
+    mov word ptr [gfx_valor], 0
+    mov si, 0
 GFX_L4:
-    mov word ptr [T1], 0
+    cmp si, [miHash_count]
+    jge GFX_L6
+    mov bx, si
+    shl bx, 1
+    mov ax, miHash_keys[bx]
+    cmp ax, [gfx_busqueda]
+    je GFX_L5
+    inc si
+    jmp GFX_L4
 GFX_L5:
-    ; MOSTRAR T1 en modo grafico
-    mov cx, 10
-    mov dx, 94
-    call SET_CURSOR_PIXEL
-    mov al, 'T'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'O'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'P'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'E'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ':'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov ax, [T1]
-    call PRINT_NUM_GRAFICO
-    ; Operacion grafica pendiente: VACIA miPila  -> T2
-    ; Operacion grafica pendiente: IF_FALSE T2 GOTO -> L1
-    ; Operacion grafica pendiente: ERROR Estructura vacía  -> 
-    ; Operacion grafica pendiente: ETIQUETA   -> L1
-    ; DESAPILAR EN miPila
-    cmp word ptr [miPila_top], 0
-    je GFX_L6
-    mov bx, [miPila_top]
-    dec bx
-    shl bx, 1
-    mov ax, miPila[bx]
-    mov [gfx_ultimo_desapilado], ax
-    dec word ptr [miPila_top]
-    mov bx, [miPila_top]
-    shl bx, 1
-    mov word ptr miPila[bx], 0
-    call GRAFICAR_TODO
-    mov cx, 10
-    mov dx, 82
-    call SET_CURSOR_PIXEL
-    mov al, 'D'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'E'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'S'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'A'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'P'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'I'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'L'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'A'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'R'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ':'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov ax, [gfx_ultimo_desapilado]
-    call PRINT_NUM_GRAFICO
+    mov ax, miHash_values[bx]
+    mov [gfx_valor], ax
     jmp GFX_L7
 GFX_L6:
-    call GRAFICAR_TODO
+    mov word ptr [gfx_valor], 0
 GFX_L7:
-    ; TOPE EN miPila -> T3
-    cmp word ptr [miPila_top], 0
-    je GFX_L8
-    mov bx, [miPila_top]
-    dec bx
-    shl bx, 1
-    mov ax, miPila[bx]
-    mov [T3], ax
-    jmp GFX_L9
+    mov ax, [gfx_valor]
+    mov [gfx_busqueda_resultado], ax
+    mov word ptr [gfx_busqueda_activa], 1
+    call GRAFICAR_TODO
+    ; ACTUALIZAR 102 2500 EN miHash
+    mov ax, 102
+    mov [gfx_busqueda], ax
+    mov si, 0
 GFX_L8:
-    mov word ptr [T3], 0
+    cmp si, [miHash_count]
+    jge GFX_L10
+    mov bx, si
+    shl bx, 1
+    mov ax, miHash_keys[bx]
+    cmp ax, [gfx_busqueda]
+    je GFX_L9
+    inc si
+    jmp GFX_L8
 GFX_L9:
-    ; MOSTRAR T3 en modo grafico
-    mov cx, 10
-    mov dx, 94
-    call SET_CURSOR_PIXEL
-    mov al, 'T'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'O'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'P'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'E'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ':'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov ax, [T3]
-    call PRINT_NUM_GRAFICO
+    mov ax, 2500
+    mov miHash_values[bx], ax
+    jmp GFX_L11
+GFX_L10:
+    cmp word ptr [miHash_count], 100
+    jge GFX_L11
+    mov bx, [miHash_count]
+    shl bx, 1
+    mov ax, [gfx_busqueda]
+    mov miHash_keys[bx], ax
+    mov ax, 2500
+    mov miHash_values[bx], ax
+    inc word ptr [miHash_count]
+GFX_L11:
+    call GRAFICAR_TODO
+    call GRAFICAR_TODO
     mov ah, 00h
     int 16h
     mov ax, 0003h
@@ -393,32 +303,652 @@ PAUSA_GRAFICA endp
 GRAFICAR_TODO proc
     mov byte ptr [gfx_color], 0Fh
     call LIMPIAR_PANTALLA
-    call GRAFICAR_PILA_miPila
+    call GRAFICAR_HASH_miHash
+    call DIBUJAR_ULTIMA_BUSQUEDA
     ret
 GRAFICAR_TODO endp
 
-GRAFICAR_PILA_miPila proc
-    mov word ptr [gfx_i], 0
-miPila_gp_loop:
-    mov ax, [gfx_i]
-    cmp ax, [miPila_top]
-    jge miPila_gp_fin
-    mov bx, ax
-    shl bx, 1
-    mov ax, miPila[bx]
-    mov [gfx_valor], ax
-    mov ax, [gfx_i]
-    mov bx, 12
-    mul bx
-    mov dx, 180
-    sub dx, ax
-    mov cx, 10
+DIBUJAR_ULTIMA_BUSQUEDA proc
+    cmp word ptr [gfx_busqueda_activa], 1
+    jne DUB_FIN
+    mov cx, 104
+    mov dx, 88
     call SET_CURSOR_PIXEL
-    call PRINT_VALOR_CORCHETES
-    inc word ptr [gfx_i]
-    jmp miPila_gp_loop
-miPila_gp_fin:
+    mov al, 'B'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'U'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'S'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'C'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'A'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'R'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov ax, [gfx_busqueda]
+    call PRINT_NUM_GRAFICO
+    mov al, ':'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov ax, [gfx_busqueda_resultado]
+    call PRINT_NUM_GRAFICO
+DUB_FIN:
     ret
-GRAFICAR_PILA_miPila endp
+DIBUJAR_ULTIMA_BUSQUEDA endp
+
+GRAFICAR_HASH_miHash proc
+    mov cx, 104
+    mov dx, 104
+    call SET_CURSOR_PIXEL
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov cx, 104
+    mov dx, 112
+    call SET_CURSOR_PIXEL
+    mov al, '|'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'I'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'N'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'D'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'I'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'C'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'E'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '|'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'C'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'L'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'A'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'V'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'E'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '|'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'V'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'A'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'L'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'O'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'R'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '|'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov cx, 104
+    mov dx, 120
+    call SET_CURSOR_PIXEL
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov word ptr [gfx_i], 0
+miHash_gh_loop:
+    mov ax, [gfx_i]
+    cmp ax, [miHash_count]
+    jge miHash_gh_fin
+    cmp ax, 8
+    jge miHash_gh_fin
+    mov ax, [gfx_i]
+    mov bx, 8
+    mul bx
+    mov dx, 128
+    add dx, ax
+    mov cx, 104
+    call SET_CURSOR_PIXEL
+    mov al, '|'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '|'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '|'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '|'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov ax, [gfx_i]
+    mov bx, 8
+    mul bx
+    mov dx, 128
+    add dx, ax
+    mov cx, 136
+    call SET_CURSOR_PIXEL
+    mov ax, [gfx_i]
+    inc ax
+    call PRINT_NUM_GRAFICO
+    mov ax, [gfx_i]
+    mov si, 8
+    mul si
+    mov dx, 128
+    add dx, ax
+    mov cx, 200
+    call SET_CURSOR_PIXEL
+    mov bx, [gfx_i]
+    shl bx, 1
+    mov ax, miHash_keys[bx]
+    call PRINT_NUM_GRAFICO
+    mov ax, [gfx_i]
+    mov si, 8
+    mul si
+    mov dx, 128
+    add dx, ax
+    mov cx, 264
+    call SET_CURSOR_PIXEL
+    mov bx, [gfx_i]
+    shl bx, 1
+    mov ax, miHash_values[bx]
+    call PRINT_NUM_GRAFICO
+    inc word ptr [gfx_i]
+    jmp miHash_gh_loop
+miHash_gh_fin:
+    mov ax, [miHash_count]
+    cmp ax, 8
+    jle miHash_gh_fin_borde
+    mov ax, 8
+miHash_gh_fin_borde:
+    mov bx, 8
+    mul bx
+    mov dx, 128
+    add dx, ax
+    mov cx, 104
+    call SET_CURSOR_PIXEL
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '-'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, '+'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    ret
+GRAFICAR_HASH_miHash endp
 
 end main
