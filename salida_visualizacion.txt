@@ -5,12 +5,40 @@
 
 CUÁDRUPLOS GENERADOS:
 ──────────────────────────────────────────────────────────────────────
-  0: ALLOC           100                  TABLA_HASH           -> miHash
-  1: INSERTAR        101                  1000                 -> miHash
-  2: INSERTAR        102                  2000                 -> miHash
-  3: INSERTAR        103                  3000                 -> miHash
-  4: BUSCAR          102                                       -> miHash
-  5: ACTUALIZAR      102                  2500                 -> miHash
+  0: ALLOC           100                  ARBOL_BINARIO        -> miArbol
+  1: AGREGARNODO     1                    50                   -> miArbol
+  2: AGREGARNODO     2                    30                   -> miArbol
+  3: AGREGARNODO     3                    70                   -> miArbol
+  4: AGREGARNODO     4                    20                   -> miArbol
+  5: AGREGARNODO     5                    40                   -> miArbol
+  6: AGREGARNODO     6                    60                   -> miArbol
+  7: AGREGARNODO     7                    80                   -> miArbol
+  8: AGREGARNODO     8                    10                   -> miArbol
+  9: AGREGARNODO     9                    25                   -> miArbol
+ 10: INORDEN         miArbol                                   -> T1
+ 11: PRINT           T1                                        -> 
+ 12: PREORDEN        miArbol                                   -> T2
+ 13: PRINT           T2                                        -> 
+ 14: POSTORDEN       miArbol                                   -> T3
+ 15: PRINT           T3                                        -> 
+ 16: RECORRIDOPORNIVELES miArbol                                   -> T4
+ 17: PRINT           T4                                        -> 
+ 18: BUSCAR          40                                        -> miArbol
+ 19: BUSCAR          99                                        -> miArbol
+ 20: ELIMINAR        10                                        -> miArbol
+ 21: ELIMINAR        25                                        -> miArbol
+ 22: ELIMINAR        20                                        -> miArbol
+ 23: ELIMINAR        30                                        -> miArbol
+ 24: INORDEN         miArbol                                   -> T5
+ 25: PRINT           T5                                        -> 
+ 26: AGREGARNODO     10                   35                   -> miArbol
+ 27: AGREGARNODO     11                   65                   -> miArbol
+ 28: AGREGARNODO     12                   45                   -> miArbol
+ 29: INORDEN         miArbol                                   -> T6
+ 30: PRINT           T6                                        -> 
+ 31: RECORRIDOPORNIVELES miArbol                                   -> T7
+ 32: PRINT           T7                                        -> 
+ 33: PRINT           999                                       -> 
 
 ══════════════════════════════════════════════════════════════════════
 
