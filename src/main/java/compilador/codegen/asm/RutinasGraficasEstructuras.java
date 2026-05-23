@@ -7,6 +7,9 @@ final class RutinasGraficasEstructuras {
     }
 
     static void agregar(GeneradorEnsambladorGrafico g, Map<String, String> tipos, Map<String, Integer> tamanos) {
+        // Esta clase no dibuja directamente en Java: agrega texto ASM al
+        // generador grafico. Por cada estructura declarada en el DSL se emite
+        // una subrutina GRAFICAR_<TIPO>_<NOMBRE>, que luego llama GRAFICAR_TODO.
         for (Map.Entry<String, String> e : tipos.entrySet()) {
             String nombre = e.getKey();
             String tipo = e.getValue();
@@ -28,6 +31,9 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void rutinaGraficaPila(GeneradorEnsambladorGrafico g, String nombre) {
+        // La pila se almacena como arreglo y un contador <nombre>_top.
+        // Se recorre desde 0 hasta top-1 y se imprime verticalmente de abajo
+        // hacia arriba para que visualmente parezca una pila.
         String loop = nombre + "_gp_loop";
         String fin = nombre + "_gp_fin";
         g.emitir("GRAFICAR_PILA_" + nombre + " proc");
@@ -57,6 +63,9 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void rutinaGraficaCola(GeneradorEnsambladorGrafico g, String nombre, int capacidad) {
+        // La cola usa un arreglo circular: front indica el primer elemento y
+        // count dice cuantos valores hay. Si el indice rebasa la capacidad, se
+        // resta capacidad para volver al inicio del arreglo.
         String loop = nombre + "_gc_loop";
         String fin = nombre + "_gc_fin";
         g.emitir("GRAFICAR_COLA_" + nombre + " proc");
@@ -91,6 +100,9 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void rutinaGraficaLista(GeneradorEnsambladorGrafico g, String nombre) {
+        // La lista enlazada vive en HEAP. Cada nodo ocupa dos palabras:
+        // HEAP[nodo] = valor y HEAP[nodo+2] = direccion del siguiente nodo.
+        // La rutina avanza con el puntero next hasta llegar a 0.
         String loop = nombre + "_gl_loop";
         String fin = nombre + "_gl_fin";
         g.emitir("GRAFICAR_LISTA_" + nombre + " proc");
@@ -121,6 +133,10 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void rutinaGraficaArbol(GeneradorEnsambladorGrafico g, String nombre) {
+        // El arbol binario tambien usa HEAP, pero cada nodo ocupa tres
+        // palabras: valor, hijo izquierdo y hijo derecho. La rutina recursiva
+        // recibe en BX el nodo actual, en CX/DX la posicion y en SI la distancia
+        // horizontal que separa a los hijos.
         String rec = "GRAFICAR_ARBOL_REC_" + nombre;
         String fin = "GRAFICAR_ARBOL_FIN_" + nombre;
         String retorno = "GRAFICAR_ARBOL_RET_" + nombre;
@@ -248,6 +264,9 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void rutinaRecorridosArbol(GeneradorEnsambladorGrafico g, String nombre) {
+        // Ademas del dibujo del arbol, se emiten recorridos clasicos para poder
+        // responder operaciones del DSL como PREORDEN, INORDEN, POSTORDEN y
+        // RECORRIDOPORNIVELES.
         rutinaRecorridoPreorden(g, nombre);
         rutinaRecorridoInorden(g, nombre);
         rutinaRecorridoPostorden(g, nombre);
@@ -255,12 +274,16 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void emitirImprimirNodoRecorrido(GeneradorEnsambladorGrafico g) {
+        // Fragmento compartido por los recorridos: imprime el valor del nodo
+        // actual y despues un espacio para separar la secuencia en pantalla.
         g.emitir("    mov ax, HEAP[bx]");
         g.emitir("    call PRINT_NUM_GRAFICO");
         g.emitir("    call PRINT_ESPACIO_GRAFICO");
     }
 
     private static void rutinaRecorridoPreorden(GeneradorEnsambladorGrafico g, String nombre) {
+        // Preorden: primero visita la raiz, luego el subarbol izquierdo y por
+        // ultimo el derecho.
         String proc = "RECORRIDO_PREORDEN_" + nombre;
         String fin = proc + "_FIN";
         g.emitir(proc + " proc");
@@ -280,6 +303,8 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void rutinaRecorridoInorden(GeneradorEnsambladorGrafico g, String nombre) {
+        // Inorden: primero el hijo izquierdo, luego la raiz y finalmente el
+        // hijo derecho. En un arbol binario de busqueda produce valores ordenados.
         String proc = "RECORRIDO_INORDEN_" + nombre;
         String fin = proc + "_FIN";
         g.emitir(proc + " proc");
@@ -299,6 +324,7 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void rutinaRecorridoPostorden(GeneradorEnsambladorGrafico g, String nombre) {
+        // Postorden: procesa los dos hijos antes de imprimir la raiz.
         String proc = "RECORRIDO_POSTORDEN_" + nombre;
         String fin = proc + "_FIN";
         g.emitir(proc + " proc");
@@ -320,6 +346,8 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void rutinaRecorridoNiveles(GeneradorEnsambladorGrafico g, String nombre) {
+        // Recorrido por niveles: usa una cola auxiliar gfx_queue para visitar
+        // el arbol de arriba hacia abajo y de izquierda a derecha.
         String proc = "RECORRIDO_NIVELES_" + nombre;
         String loop = proc + "_LOOP";
         String sinIzq = proc + "_SIN_IZQ";
@@ -371,6 +399,9 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void rutinaGraficaGrafo(GeneradorEnsambladorGrafico g, String nombre) {
+        // El grafo se representa con dos listas: una de nodos y otra de aristas.
+        // Las aristas se guardan en dos arreglos paralelos: from[i] -> to[i].
+        // La visualizacion textual muestra primero los nodos y luego cada arista.
         String loopNodos = nombre + "_gg_nodos_loop";
         String sinConector = nombre + "_gg_sin_conector";
         String finNodos = nombre + "_gg_nodos_fin";
@@ -436,6 +467,9 @@ final class RutinasGraficasEstructuras {
     }
 
     private static void rutinaGraficaHash(GeneradorEnsambladorGrafico g, String nombre) {
+        // La tabla hash se dibuja como tabla: indice, clave y valor. Para que
+        // quepa en la pantalla grafica de 320x200, solo se muestran las primeras
+        // 8 entradas aunque internamente pueda haber mas capacidad.
         String loop = nombre + "_gh_loop";
         String fin = nombre + "_gh_fin";
         String finBorde = nombre + "_gh_fin_borde";

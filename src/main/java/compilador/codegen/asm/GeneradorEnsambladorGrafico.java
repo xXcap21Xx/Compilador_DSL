@@ -18,6 +18,9 @@ import compilador.core.Cuadruplo;
 public class GeneradorEnsambladorGrafico {
     // Backend ASM grafico: genera un programa que entra a modo 13h y dibuja
     // estructuras.
+    // codigo guarda linea por linea el ensamblador que se va construyendo.
+    // variables registra simbolos que despues se declaran en .data.
+    // estructurasTipo y estructurasTamano describen cada estructura creada.
     private final List<String> codigo;
     private final Set<String> variables;
     private final Set<String> temporalesRecorrido;
@@ -129,18 +132,23 @@ main proc
     }
 
     private void traducirEtiqueta(String etiqueta) {
+        // Las etiquetas del codigo intermedio se conservan como etiquetas ASM.
+        // Sirven como destino para GOTO, IF_TRUE e IF_FALSE.
         if (!etiqueta.isEmpty()) {
             emitir(etiqueta + ":");
         }
     }
 
     private void traducirGoto(String etiqueta) {
+        // GOTO del cuadruplo se convierte en un salto incondicional de 8086.
         if (!etiqueta.isEmpty()) {
             emitir("    jmp " + etiqueta);
         }
     }
 
     private void traducirSaltoCondicional(String condicion, String etiqueta, boolean saltarSiVerdadero) {
+        // Las condiciones se representan como 0 o 1. Se carga el valor en AX,
+        // se compara contra cero y se salta segun la variante IF_TRUE/IF_FALSE.
         if (condicion.isEmpty() || etiqueta.isEmpty()) {
             return;
         }
@@ -150,6 +158,8 @@ main proc
     }
 
     private void traducirAritmetica(String op, String arg1, String arg2, String resultado) {
+        // Traduce operaciones binarias del CGI a instrucciones 8086.
+        // El resultado se guarda en memoria para que otro cuadruplo pueda leerlo.
         if (resultado.isEmpty()) {
             return;
         }
@@ -178,6 +188,8 @@ main proc
     }
 
     private void traducirComparacion(String op, String arg1, String arg2, String resultado) {
+        // La comparacion se materializa como 0 falso o 1 verdadero, porque los
+        // flags del procesador no sobreviven como dato entre cuadruplos.
         if (resultado.isEmpty()) {
             return;
         }
@@ -197,6 +209,8 @@ main proc
     }
 
     private void traducirEstadoEstructura(String estructura, String resultado, boolean consultarVacia) {
+        // VACIA y LLENA se resuelven leyendo el contador interno de la estructura:
+        // pila_top, cola_count, lista_count, hash_count o grafo_node_count.
         if (estructura.isEmpty() || resultado.isEmpty()) {
             return;
         }
@@ -423,6 +437,8 @@ main proc
     }
 
     private void traducirEliminacionConParam(String op, String valor, String estructura) {
+        // Algunas eliminaciones necesitan un dato extra: valor o posicion.
+        // Aqui se despacha a la rutina concreta segun el tipo de estructura.
         String tipo = estructurasTipo.get(estructura);
         if (tipo == null) {
             emitir("    ; Operacion grafica pendiente: " + op + " " + valor + " -> " + estructura);
@@ -441,6 +457,8 @@ main proc
     }
 
     private void eliminarFinalLista(String lista) {
+        // Para borrar el ultimo nodo en una lista simple hay que encontrar el
+        // penultimo. SI guarda el anterior y BX el nodo actual durante el avance.
         String soloUno = nuevaEtiqueta();
         String loop = nuevaEtiqueta();
         String encontrado = nuevaEtiqueta();
@@ -475,6 +493,8 @@ main proc
     }
 
     private void eliminarListaPorValor(String valor, String lista) {
+        // Busca el primer nodo con el valor pedido. Si es la cabeza, cambia head;
+        // si esta en medio, enlaza el nodo anterior con el siguiente.
         String esHead = nuevaEtiqueta();
         String loop = nuevaEtiqueta();
         String encontrado = nuevaEtiqueta();
@@ -521,6 +541,8 @@ main proc
     }
 
     private void eliminarListaPorPosicion(String pos, String lista) {
+        // Elimina por indice logico. La posicion 0 se trata aparte porque mueve
+        // directamente la cabeza de la lista.
         String buscarPos = nuevaEtiqueta();
         String avanzar = nuevaEtiqueta();
         String actualizarTail = nuevaEtiqueta();
@@ -571,6 +593,9 @@ main proc
     }
 
     private void eliminarArbol(String valor, String arbol) {
+        // Borrado en arbol binario de busqueda. Maneja tres casos:
+        // nodo sin hijo izquierdo, nodo sin hijo derecho y nodo con dos hijos.
+        // Con dos hijos usa el sucesor inorden del subarbol derecho.
         String find = nuevaEtiqueta();
         String goRight = nuevaEtiqueta();
         String found = nuevaEtiqueta();
@@ -669,6 +694,8 @@ main proc
     }
 
     private void insertarLista(String op, String valor, String lista) {
+        // Reserva un nodo en HEAP y lo conecta al inicio o al final. Cada nodo
+        // ocupa dos palabras: valor y direccion del siguiente nodo.
         String append = nuevaEtiqueta();
         String noVacia = nuevaEtiqueta();
         String fin = nuevaEtiqueta();
@@ -705,6 +732,8 @@ main proc
     }
 
     private void insertarArbol(String valor, String arbol) {
+        // Insercion de arbol binario de busqueda. Menores o iguales van a la
+        // izquierda; mayores van a la derecha.
         String rootExiste = nuevaEtiqueta();
         String loop = nuevaEtiqueta();
         String derecha = nuevaEtiqueta();
@@ -746,6 +775,7 @@ main proc
     }
 
     private void insertarNodoGrafo(String nodo, String grafo) {
+        // Agrega un nodo al arreglo de nodos mientras exista capacidad.
         int cap = estructurasTamano.getOrDefault(grafo, 100);
         String fin = nuevaEtiqueta();
         emitir("    ; AGREGARNODO " + nodo + " EN " + grafo);
@@ -760,6 +790,8 @@ main proc
     }
 
     private void insertarAristaGrafo(String origen, String destino, String grafo) {
+        // Guarda una arista dirigida en dos arreglos paralelos:
+        // edges_from[i] es el origen y edges_to[i] es el destino.
         int cap = estructurasTamano.getOrDefault(grafo, 100);
         String fin = nuevaEtiqueta();
         emitir("    ; AGREGARARISTA " + origen + " " + destino + " EN " + grafo);
@@ -776,6 +808,8 @@ main proc
     }
 
     private void insertarHash(String clave, String valor, String hash) {
+        // Tabla hash simplificada para visualizacion: almacena claves y valores
+        // por posicion de insercion, sin calcular una dispersion real.
         int cap = estructurasTamano.getOrDefault(hash, 100);
         String fin = nuevaEtiqueta();
         emitir("    ; INSERTAR " + clave + " " + valor + " EN " + hash);
@@ -792,6 +826,8 @@ main proc
     }
 
     private void actualizarHash(String clave, String valor, String hash) {
+        // Si la clave ya existe, actualiza su valor. Si no existe, inserta la
+        // nueva pareja clave-valor al final, siempre que haya espacio.
         int cap = estructurasTamano.getOrDefault(hash, 100);
         String loop = nuevaEtiqueta();
         String encontrado = nuevaEtiqueta();
@@ -829,6 +865,8 @@ main proc
     }
 
     private void buscarHash(String clave, String hash) {
+        // Recorre linealmente las claves. El resultado se guarda en variables
+        // graficas para que GRAFICAR_TODO pueda mostrarlo en pantalla.
         String loop = nuevaEtiqueta();
         String encontrado = nuevaEtiqueta();
         String noEncontrado = nuevaEtiqueta();
@@ -863,7 +901,8 @@ main proc
 
     private void traducirPrint(String valor) {
         // En modo grafico no se usa la consola de texto normal; el numero se
-        // imprime con una rutina grafica propia sobre la pantalla 13h.
+        // imprime con una rutina propia sobre la pantalla 13h.
+        // Si el valor ya fue dibujado por una consulta, evita duplicarlo.
         if (temporalesRecorrido.contains(valor)) {
             emitir("    ; MOSTRAR " + valor + " omitido: el recorrido ya se imprimio en modo grafico");
             return;
@@ -892,6 +931,9 @@ main proc
     }
 
     private void traducirRecorridoArbol(String op, String arbol, String resultado) {
+        // PREORDEN, INORDEN, POSTORDEN y RECORRIDOPORNIVELES se imprimen en una
+        // zona fija de la pantalla. El resultado temporal queda marcado para que
+        // MOSTRAR no lo imprima dos veces.
         if (!resultado.isEmpty()) {
             temporalesRecorrido.add(resultado);
         }
@@ -933,6 +975,8 @@ main proc
     }
 
     private void traducirVecinosGrafo(String nodo, String grafo, String resultado) {
+        // VECINOS recorre todas las aristas y muestra los destinos cuyo origen
+        // coincide con el nodo solicitado.
         if (!resultado.isEmpty()) {
             temporalesRecorrido.add(resultado);
         }
@@ -976,6 +1020,8 @@ main proc
     }
 
     private void traducirTamanoEstructura(String estructura, String resultado) {
+        // Convierte TAMANO EN estructura en una lectura del contador interno.
+        // El contador depende del tipo: top, count o node_count.
         registrarVariable(resultado);
         if (!resultado.isEmpty()) {
             temporalesTamano.add(resultado);
@@ -995,6 +1041,8 @@ main proc
     }
 
     private void traducirFrenteCola(String op, String cola, String resultado) {
+        // FRENTE lee el dato apuntado por front sin quitarlo de la cola.
+        // Si la cola esta vacia, devuelve 0 para mantener un valor definido.
         registrarVariable(resultado);
         if (!resultado.isEmpty() && !temporalesFrenteY.containsKey(resultado)) {
             temporalesFrenteY.put(resultado, 50 + (temporalesFrenteY.size() * 15));
@@ -1022,6 +1070,8 @@ main proc
     }
 
     private void traducirTopePila(String op, String pila, String resultado) {
+        // TOPE consulta el ultimo elemento apilado sin modificar la pila.
+        // Si la pila esta vacia, deja 0 como resultado.
         registrarVariable(resultado);
         if (!resultado.isEmpty()) {
             temporalesTope.add(resultado);
@@ -1247,6 +1297,8 @@ PAUSA_GRAFICA endp
     }
 
     private void agregarGraficarTodo() {
+        // Rutina central de refresco. Limpia la pantalla y llama a la rutina de
+        // dibujo de cada estructura creada por el programa DSL.
         emitir("GRAFICAR_TODO proc");
         emitir("    mov byte ptr [gfx_color], 0Fh");
         emitir("    call LIMPIAR_PANTALLA");
@@ -1261,6 +1313,8 @@ PAUSA_GRAFICA endp
     }
 
     private void rutinaUltimaBusqueda() {
+        // Si una busqueda dejo activa la bandera, imprime el ultimo valor
+        // consultado y el resultado encontrado.
         String fin = "DUB_FIN";
         emitir("DIBUJAR_ULTIMA_BUSQUEDA proc");
         emitir("    cmp word ptr [gfx_busqueda_activa], 1");
@@ -1287,6 +1341,8 @@ PAUSA_GRAFICA endp
     public String obtenerCodigoEnsamblador() {
         // Construye el ASM final e inserta en .data las variables temporales,
         // estructuras y buffers graficos que se descubrieron durante la traduccion.
+        // Esto se hace al final porque durante la traduccion se descubren que
+        // variables, heaps y colas auxiliares realmente se necesitan.
         StringBuilder sb = new StringBuilder();
         for (String linea : codigo) {
             if (".code".equals(linea)) {
@@ -1359,6 +1415,8 @@ PAUSA_GRAFICA endp
     }
 
     private void cargarAX(String valor) {
+        // Carga en AX un literal numerico o el contenido de una variable.
+        // AX es el acumulador principal usado para operaciones e impresion.
         if (valor == null || valor.isEmpty()) {
             emitir("    mov ax, 0");
         } else if (esNumero(valor)) {
@@ -1370,6 +1428,8 @@ PAUSA_GRAFICA endp
     }
 
     private void cargarBX(String valor) {
+        // Carga el segundo operando en BX. Tambien se usa como indice para
+        // arreglos, por eso aparece seguido de desplazamientos con shl bx, 1.
         if (valor == null || valor.isEmpty()) {
             emitir("    mov bx, 0");
         } else if (esNumero(valor)) {
@@ -1381,6 +1441,8 @@ PAUSA_GRAFICA endp
     }
 
     private void emitirOperacionConAX(String instruccion, String valor) {
+        // Emite instrucciones como add ax, valor o sub ax, valor. Si el valor
+        // es variable, se lee desde memoria; si es numero, se usa inmediato.
         if (valor == null || valor.isEmpty()) {
             emitir("    " + instruccion + " ax, 0");
         } else if (esNumero(valor)) {
@@ -1392,6 +1454,8 @@ PAUSA_GRAFICA endp
     }
 
     private void compararAXCon(String valor) {
+        // Prepara una comparacion contra AX para despues usar saltos como je,
+        // jne, jl, jg, jle o jge.
         if (valor == null || valor.isEmpty()) {
             emitir("    cmp ax, 0");
         } else if (esNumero(valor)) {
@@ -1403,6 +1467,7 @@ PAUSA_GRAFICA endp
     }
 
     private String saltoComparacion(String op) {
+        // Mapea operadores del codigo intermedio a saltos condicionales 8086.
         switch (op) {
             case "<":
                 return "jl";
@@ -1422,6 +1487,8 @@ PAUSA_GRAFICA endp
     }
 
     private String contadorEstructura(String estructura, String tipo) {
+        // Devuelve el nombre del contador interno que permite saber tamanos,
+        // estado vacio o estado lleno segun el tipo de estructura.
         if (tipo == null) {
             return null;
         }
@@ -1438,6 +1505,8 @@ PAUSA_GRAFICA endp
     }
 
     private void registrarVariable(String nombre) {
+        // Registra solo identificadores que necesitan espacio en .data.
+        // No se registran numeros ni nombres de estructuras ya declaradas.
         if (nombre != null && !nombre.isEmpty() && !esNumero(nombre) && !estructurasTipo.containsKey(nombre)) {
             variables.add(nombre);
         }
@@ -1448,6 +1517,8 @@ PAUSA_GRAFICA endp
     }
 
     private String normalizarTipo(String tipo) {
+        // Agrupa variantes del DSL en tipos graficos comunes. Por ejemplo,
+        // PILA_CIRCULAR usa la misma visualizacion base que PILA.
         String t = tipo == null ? "" : tipo.toUpperCase();
         if (t.contains("PILA")) {
             return "PILA";
